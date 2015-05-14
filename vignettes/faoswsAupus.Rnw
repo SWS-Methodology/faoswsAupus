@@ -65,6 +65,20 @@ options(replace.assign=TRUE, width=80)
 assign("depthtrigger", 10, data.table:::.global)
 @ 
 
+\section{Introduction}
+
+First, let us give an overview of the procedure for creating the food balance sheets.  The data we collect for food balance sheets is usually at the primary level (e.g. wheat, milk, etc.).  However, there are several exceptions: first, some countries may report production of non-primary products (flour, beer, etc.) but this is not commonly the case.  Additionally, trade information is provided in great detail: we may know how much bread went from country A to country B.  We must account for these trade imbalances within the commodity balances (for example, we must consider the trade imbalance of bread in the wheat commodity tree).  One approach would be to simply roll-up all trade imbalances into the top level equivalent (i.e. wheat, in this example) but there are further complications.  Processing of wheat into flour creates bran and germ, and these products are almost entirely put into feed utilization.
+
+Thus, we take the following approach in creating the food balance sheets.
+
+\begin{enumerate}
+    \item We start with the ``primary'' commodities: wheat, barley, milk, etc. and we convert them into production at the first processed level (flour, butter, etc.) if the values at that level are missing (otherwise the official data is used).  To compute the values at the first processed level, we use three values: the percent going to processing (as some products may be consumed at primary level), the shares (which specifies how the processed commodity should be allocated to all of it's available children) and the extraction rate (which specifies a sort of conversion rate from a parent commodity to it's child).  For example, suppose we want to create flour production from wheat.  We may have 90\% of wheat being processed (and 10\% left as such), 95\% of processed wheat that is allocated to flour and 5\% allocated to beer, and an 80\% extraction rate of wheat to flour.  Then, if we had 100 thousand tons of wheat, we would convert this to 100(90\%)(95\%)(80\%) = 68.4 thousand tons of flour.
+    \item In the above step, we must also be careful to create all appropriate elements, as specified by the tree structure.  For example, bran and germ are also created when wheat is processed into flour.  These are not elements with separate shares but should be thought of as by-products in the creation of flour.
+    \item We continue step 1 and process commodities down the commodity tree until we reach a point where no further processing is required.  For example, wheat must be processed down into flour so we can create bran and germ (as these elements often get allocated to feed).  However, it does not need to be processed into bread, as no important information is gained in that process.  Another interesting example is the barley tree: barley must be processed into barley malt and then barley beer, and this processing must occur because alcoholic products are placed in a different group in the standardization (i.e. aggregation) of the commodity tree.
+    \item We can now compute nutrient information (calories, proteins, fats) from quantities.
+    \item Now, we still have trade data at lower levels of processing, and so we must now move back up the commodity tree.  Thus, we start at the bottom nodes and divide by extraction rates to compute parent quantites.  However, with ``by-products'' (for example, wheat bran and germ) we do not standardize quantities as they are already accounted for in the main product standardization.  However, standardization of calories/fats/proteins is performed for all products by adding the calorie/fat/protein values.  Note: separate trees may be used for processing vs. standardizing, as some commodities do not roll up into their respective parents (e.g. beer is not in cereals and butter is not in milk). 
+\end{enumerate}
+
 \section{Data Initialization}
 
 First, we need to load the relevant packages:
