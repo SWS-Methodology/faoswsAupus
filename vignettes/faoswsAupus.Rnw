@@ -110,7 +110,7 @@ Note: usually these values would be generated in the following manner:
 <<eval=FALSE>>=
 GetTestEnvironment(
     baseUrl = "https://hqlprswsas1.hq.un.fao.org:8181/sws",
-    token = "66984d62-6add-4ad4-bdf3-5d8538bb2b70")
+    token = "34c18199-4f48-4ce4-a8d5-16ce62e8e23d")
 usAupusParam = getAupusParameter(areaCode = "231", assignGlobal = FALSE,
                                  yearsToUse = 2009:2013)
 US = getAupusDataset(aupusParam = usAupusParam)

@@ -23,11 +23,11 @@ getAupusData = function(aupusParam, database = c("new", "old"), conn){
     ## Data Quality Checks
     if(!exists("aupusParameterEnsured") || !aupusParameterEnsured)
         ensureAupusParameter(aupusParam)
+    database = match.arg(database)
     stopifnot(database %in% c("new", "old"))
     if(database == "old")
         stopifnot(!missing(conn))
     
-    database = match.arg(database)
     if(database == "old"){
         aupusQuery =
             paste0("SELECT *
