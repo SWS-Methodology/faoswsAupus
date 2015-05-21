@@ -55,8 +55,8 @@ calculateEle111 = function(stotal, data, aupusParam){
 
     yearSearch = function(subData){
         n = NROW(subData)
-        newValue = as.vector(rep(NA, n), mode = "numeric")
-        newSymb = subData[, get(element111Symb)]
+        newValue = subData[[element111Num]]
+        newSymb = subData[[element111Symb]]
         ## Does R_171 have a valid value?
         ## Find element 21 and 31 for current and next year
         ele21t1 = c(subData[, get(element21Num)], NA)[1:nrow(subData) + 1]
@@ -80,7 +80,8 @@ calculateEle111 = function(stotal, data, aupusParam){
     data[, c(element111Num, element111Symb, "replaced") :=
              yearSearch(.SD), by = c(key(data)[key(data) != yearCol]),
         ## Only grab the columns of .SD that you need (for efficiency purposes)
-         .SDcols = c(element111Symb, ratio171Num, element21Num, element31Num)]
+         .SDcols = c(element111Symb, ratio171Num, element21Num,
+                     element31Num, element111Num)]
     replaceIndex2 = which(unlist(data[, replaced]))
     data[, replaced := NULL]
 
