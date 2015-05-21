@@ -35,7 +35,7 @@ suaToNetworkRepresentation = function(dataList, aupusParam){
                                    "itemInfoData", "populationData",
                                    "extractionRateData"))
 
-    edges = buildEdges(dataList)
+    edges = buildEdges(dataList, aupusParam)
     nodes = buildNodes(dataList)
 
     ## CHECK (Michael): Add in nodes that are contained in the edges
