@@ -39,7 +39,7 @@ subsetAupus = function(aupusData, itemKeys, aupusParam){
     ## Get all the keys which are connected with the provided keys
     newKeys = itemKeys
     while(length(newKeys) > 0){
-        newKeys = aupusData$shareData[get(childName) %in% itemKeys |
+        newKeys = aupusData$inputData[get(childName) %in% itemKeys |
                                       get(parentName) %in% itemKeys,
                                       unique(c(get(parentName),
                                                get(childName)))]
