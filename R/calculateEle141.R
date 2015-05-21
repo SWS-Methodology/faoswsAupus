@@ -41,7 +41,7 @@ calculateEle141 = function(stotal, data, aupusParam){
     
     ## First type of commodity: Consumption is defined as a ratio of total
     ## supply.
-    replaceIndex1 = !data[, get(itemTypeCol) %in% c(50, 58, 59, 60, 61) &
+    replaceIndex1 = data[, !get(itemTypeCol) %in% c(50, 58, 59, 60, 61) &
                                replaceable(get(element141Symb),
                                            get(ratio141Num) * get(stotal))]
     data[replaceIndex1,
