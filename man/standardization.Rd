@@ -4,7 +4,9 @@
 \alias{standardization}
 \title{Standardization}
 \usage{
-standardization(graph, standardizeElement, plot, aupusParam, ...)
+standardization(graph, standardizeElement, plot, aupusParam,
+  productionElement = paste0(aupusParam$keyNames$valuePrefix,
+  aupusParam$keyNames$elementName, "_51"), ...)
 }
 \arguments{
 \item{graph}{The igraph object containing the node and edge information,
@@ -21,6 +23,9 @@ option if running this function in interactive mode.}
 \item{aupusParam}{A list of running parameters to be used in pulling the
 data. Typically, this is generated from getAupusParameter (see that
 function for a description of the required elements).}
+
+\item{productionElement}{The column name of the production element in the
+nodes of the graph.  Important if standardizeProduction = FALSE.}
 
 \item{...}{Additional arguments to be passed to the plotting function.}
 }

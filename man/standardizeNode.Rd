@@ -4,16 +4,27 @@
 \alias{standardizeNode}
 \title{Standardize Node}
 \usage{
-standardizeNode(graph, workingNode, standardizeElement)
+standardizeNode(graph, workingNode, standardizeElement,
+  productionElement = paste0(aupusParam$keyNames$valuePrefix,
+  aupusParam$keyNames$elementName, "_51"), standardizeProduction = FALSE)
 }
 \arguments{
-\item{graph}{The graph object created by the function
-constructGraph.}
+\item{graph}{The graph object created by the function constructGraph.}
 
 \item{workingNode}{The nodes to be standardized}
 
 \item{standardizeElement}{The attribute of the nodes to be
 standardized.}
+
+\item{productionElement}{The column name of the production element in the
+nodes of the graph.  Important if standardizeProduction = FALSE.}
+
+\item{standardizeProduction}{Logical.  Production values are not
+  standardized up the AUPUS commodity tree as they are already accounted for
+  in the AUPUS processing (i.e. the input from processing procedure).
+  However, production will need to roll up when aggregating to higher level
+  groupings (e.g. oranges and mandarins from the oranges tree and mandarins
+  tree).}
 }
 \value{
 A graph object that has been updated according to the description

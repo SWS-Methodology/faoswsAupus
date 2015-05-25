@@ -14,6 +14,8 @@
 ##' @param aupusParam A list of running parameters to be used in pulling the data.
 ##' Typically, this is generated from getAupusParameter (see that function for
 ##' a description of the required elements).
+##' @param productionElement The column name of the production element in the
+##'   nodes of the graph.  Important if standardizeProduction = FALSE.
 ##' 
 ##' @return A data.table object containing the final standardization values
 ##' for each year.
@@ -21,7 +23,10 @@
 ##' @export
 ##' 
 
-fbsStandardization = function(graph, standardizeElement, plot, aupusParam){
+fbsStandardization = function(graph, standardizeElement, plot, aupusParam, 
+                              productionElement = paste0(aupusParam$keyNames$valuePrefix,
+                                                         aupusParam$keyNames$elementName,
+                                                         "_51")){
 
     ## Data Quality Checks
     if(!exists("aupusParameterEnsured") || !aupusParameterEnsured)

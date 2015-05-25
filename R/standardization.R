@@ -17,6 +17,8 @@
 ##' @param aupusParam A list of running parameters to be used in pulling the
 ##' data. Typically, this is generated from getAupusParameter (see that
 ##' function for a description of the required elements).
+##' @param productionElement The column name of the production element in the
+##'   nodes of the graph.  Important if standardizeProduction = FALSE.
 ##' @param ... Additional arguments to be passed to the plotting function.
 ##' 
 ##' @return A data.table object with one column for the item key and one
@@ -26,7 +28,10 @@
 ##' @export
 ##' 
 
-standardization = function(graph, standardizeElement, plot, aupusParam, ...){
+standardization = function(graph, standardizeElement, plot, aupusParam,
+                           productionElement = paste0(aupusParam$keyNames$valuePrefix,
+                                                      aupusParam$keyNames$elementName,
+                                                      "_51"), ...){
     while (length(E(graph)) > 0) {
         ## Which nodes currently have no inputs but do have outputs?
         workingNode =
@@ -62,7 +67,8 @@ standardization = function(graph, standardizeElement, plot, aupusParam, ...){
         }
         graph = standardizeNode(graph = graph, 
             workingNode = workingNode,
-            standardizeElement = standardizeElement)
+            standardizeElement = standardizeElement,
+            productionElement = productionElement)
 #         intermediateStandardization = rbind(intermediateStandardization, 
 #             standardize$intermediateValues)
     }

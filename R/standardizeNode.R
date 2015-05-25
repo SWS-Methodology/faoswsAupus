@@ -35,7 +35,10 @@
 ##' 
 
 standardizeNode = function (graph, workingNode, standardizeElement,
-                            productionElement, standardizeProduction = FALSE){
+                            productionElement = paste0(aupusParam$keyNames$valuePrefix,
+                                                       aupusParam$keyNames$elementName,
+                                                       "_51"),
+                            standardizeProduction = FALSE){
 
     ## Get the edges and the construct the reverse matrix
     outEdges = E(graph)[from(V(graph)[workingNode])]
@@ -50,6 +53,10 @@ standardizeNode = function (graph, workingNode, standardizeElement,
     rateMatrix = get.adjacency(subgraph.edges(graph, outEdges), 
         sparse = FALSE, attr = "Value_extraction") / 10000
     reverseMatrix = t(shareMatrix)/t(rateMatrix)
+    ## NOTE (Josh): The shares table does not specify which commodities should
+    ## be rolled up to their parents but rather the opposite.  In
+    ## standardization, we should not use shares.
+    reverseMatrix = 1/t(rateMatrix)
     reverseMatrix[is.na(reverseMatrix) | !is.finite(reverseMatrix)] = 0
     ## reverseMatrix allows us to transfer quantities from a child to it's
     ## parent.  However, the parent values should all remain fixed, so place

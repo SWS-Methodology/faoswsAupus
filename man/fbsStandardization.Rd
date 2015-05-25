@@ -4,7 +4,9 @@
 \alias{fbsStandardization}
 \title{FBS Standardization}
 \usage{
-fbsStandardization(graph, standardizeElement, plot, aupusParam)
+fbsStandardization(graph, standardizeElement, plot, aupusParam,
+  productionElement = paste0(aupusParam$keyNames$valuePrefix,
+  aupusParam$keyNames$elementName, "_51"))
 }
 \arguments{
 \item{graph}{The standardization graph from the function
@@ -22,6 +24,9 @@ mode.}
 \item{aupusParam}{A list of running parameters to be used in pulling the data.
 Typically, this is generated from getAupusParameter (see that function for
 a description of the required elements).}
+
+\item{productionElement}{The column name of the production element in the
+  nodes of the graph.  Important if standardizeProduction = FALSE.}
 }
 \value{
 A data.table object containing the final standardization values
