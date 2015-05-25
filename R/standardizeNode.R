@@ -52,6 +52,12 @@ standardizeNode = function (graph, workingNode, standardizeElement,
     ## within the database.
     rateMatrix = get.adjacency(subgraph.edges(graph, outEdges), 
         sparse = FALSE, attr = "Value_extraction") / 10000
+    ## Define the shares to be 1 if a single connection exists.  However, if a
+    ## node has multiple parents, give each parent an equal proportion of the
+    ## share.
+    shareMatrix = get.adjacency(subgraph.edges(graph, outEdges), 
+        sparse = FALSE)
+    shareMatrix = shareMatrix * 1/apply(shareMatrix, 1, sum) 
     reverseMatrix = t(shareMatrix)/t(rateMatrix)
     ## NOTE (Josh): The shares table does not specify which commodities should
     ## be rolled up to their parents but rather the opposite.  In
