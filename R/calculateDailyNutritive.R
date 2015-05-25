@@ -69,7 +69,7 @@ calculateDailyNutritive = function(population11Num, population21Num, dailyElemen
     data[replaceIndex1,
          `:=`(c(dailyColValue, dailyColSymb),
               appendSymbol(get(totalColValue) / 365 *
-                               computeRatio(1000, validPopulation),
+                               faoswsUtil::computeRatio(1000, validPopulation),
                            "C"))]
     data[, validPopulation := NULL]
     

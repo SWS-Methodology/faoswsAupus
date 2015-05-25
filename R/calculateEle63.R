@@ -40,7 +40,7 @@ calculateEle63 = function(data, aupusParam){
     data[replaceIndex1,
          `:=`(c(element63Num, element63Symb),
               appendSymbol(get(element62Num) *
-                               computeRatio(1000, get(element61Num)), "C"))]
+                    faoswsUtil::computeRatio(1000, get(element61Num)), "C"))]
     
     ## If any one of them is missing, then the new calculation would
     ## be missing. Therefore, replace with a missing value.

@@ -38,12 +38,12 @@ calculateEle93 = function(data, aupusParam){
                              !is.na(get(element91Num)) &
                              !is.na(get(element92Num)) &
                              replaceable(get(element93Symb),
-                                         computeRatio(get(element92Num) * 1000,
-                                                      get(element91Num)))]
+                                faoswsUtil::computeRatio(get(element92Num) * 1000,
+                                                         get(element91Num)))]
     data[replaceIndex1,
          `:=`(c(element93Num, element93Symb),
               appendSymbol(get(element92Num) *
-                               computeRatio(1000, get(element91Num)), "C"))]
+                               faoswsUtil::computeRatio(1000, get(element91Num)), "C"))]
 
     replaceIndex2 = data[, !get(itemTypeCol) %in% c(42, 43, 44, 45, 46, 47,
                                                     48, 49, 50, 51, 52) &

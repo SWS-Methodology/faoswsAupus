@@ -30,7 +30,7 @@ calculateEle174 = function(population11Num, data, aupusParam){
 
     replaceIndex1 = data[, get(itemTypeCol) == 57 &
                          replaceable(get(element174Symb),
-                                     computeRatio(get(element171Num),
+                                     faoswsUtil::computeRatio(get(element171Num),
                                         get(population11Num)))]
     data[replaceIndex1,
          `:=`(c(element174Num, element174Symb),
