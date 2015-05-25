@@ -21,12 +21,6 @@
 ##' standardized.
 ##' @param productionElement The column name of the production element in the
 ##'   nodes of the graph.  Important if standardizeProduction = FALSE.
-##' @param standardizeProduction Logical.  Production values are not
-##'   standardized up the AUPUS commodity tree as they are already accounted for
-##'   in the AUPUS processing (i.e. the input from processing procedure). 
-##'   However, production will need to roll up when aggregating to higher level
-##'   groupings (e.g. oranges and mandarins from the oranges tree and mandarins
-##'   tree).
 ##' 
 ##' @return A graph object that has been updated according to the description
 ##' above.
@@ -37,8 +31,7 @@
 standardizeNode = function (graph, workingNode, standardizeElement,
                             productionElement = paste0(aupusParam$keyNames$valuePrefix,
                                                        aupusParam$keyNames$elementName,
-                                                       "_51"),
-                            standardizeProduction = FALSE){
+                                                       "_51")){
 
     ## Get the edges and the construct the reverse matrix
     outEdges = E(graph)[from(V(graph)[workingNode])]
@@ -46,8 +39,8 @@ standardizeNode = function (graph, workingNode, standardizeElement,
     ## child, but in a matrix instead of a graph.  They are also
     ## subsetted based on the current working nodes to save memory.
     ## Divide shareMatrix by 100, as it's expressed as a percent
-    shareMatrix = get.adjacency(subgraph.edges(graph, outEdges), 
-        sparse = FALSE, attr = "Value_share") / 100
+#     shareMatrix = get.adjacency(subgraph.edges(graph, outEdges), 
+#         sparse = FALSE, attr = "Value_share") / 100
     ## Divide rateMatrix by 10000, as it's expressed as a percent and scaled
     ## within the database.
     rateMatrix = get.adjacency(subgraph.edges(graph, outEdges), 
@@ -57,12 +50,8 @@ standardizeNode = function (graph, workingNode, standardizeElement,
     ## share.
     shareMatrix = get.adjacency(subgraph.edges(graph, outEdges), 
         sparse = FALSE)
-    shareMatrix = shareMatrix * 1/apply(shareMatrix, 1, sum) 
+    shareMatrix = shareMatrix * 1/apply(shareMatrix, 1, sum)
     reverseMatrix = t(shareMatrix)/t(rateMatrix)
-    ## NOTE (Josh): The shares table does not specify which commodities should
-    ## be rolled up to their parents but rather the opposite.  In
-    ## standardization, we should not use shares.
-    reverseMatrix = 1/t(rateMatrix)
     reverseMatrix[is.na(reverseMatrix) | !is.finite(reverseMatrix)] = 0
     ## reverseMatrix allows us to transfer quantities from a child to it's
     ## parent.  However, the parent values should all remain fixed, so place
@@ -87,11 +76,13 @@ standardizeNode = function (graph, workingNode, standardizeElement,
 
     ## Standardize children up to parents
     standardizedMatrix = reverseMatrix %*% ifelse(is.na(valueMatrix), 0, valueMatrix)
-    ## If production is not intended to be standardized, then replace that column of standardizedMatrix with the original column of valueMatrix.
-    if(!standardizeProduction){
-        standardizedMatrix[, colnames(standardizedMatrix) == productionElement] =
-            valueMatrix[, colnames(valueMatrix) == productionElement]
-    }
+    ## Production is not intended to be standardized within the commodity trees,
+    ## so in those cases replace that column of standardizedMatrix with the
+    ## original column of valueMatrix.  However, when working with aggregate
+    ## elements (i.e. FBS elements), standardization of production is required.
+    rowFilter = !grepl("S", rownames(standardizedMatrix))
+    standardizedMatrix[rowFilter, colnames(standardizedMatrix) == productionElement] =
+        valueMatrix[rowFilter, colnames(valueMatrix) == productionElement]
 
     ## Save the target value back to the graph, and the intermediate
     ## to the intermediate value matrix
