@@ -57,8 +57,11 @@ Aupus = function(aupusNetwork, aupusParam){
                                aupusParam = aupusParam)
 
         ## Step (2): Update the edges (extraction rate and input from processing)
-        updateEdges(nodes = nodesCurrentLevel, 
-                    edges = edges, aupusParam = aupusParam)
+        ## NOTE (Josh): It's unclear to me what this function does or why it is
+        ## needed.  Instead, it seems to create problems with the edges table by
+        ## overwriting extraction rates.  So, I'm commenting it out.
+#         updateEdges(nodes = nodesCurrentLevel, 
+#                     edges = edges, aupusParam = aupusParam)
 
         ## Step (3): Propagate input from processing to the node
         updateInputFromProcessing(nodes = nodesNextLevel,
