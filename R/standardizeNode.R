@@ -41,6 +41,12 @@ standardizeNode = function (graph, workingNode, standardizeElement){
     ## within the database.
     rateMatrix = get.adjacency(subgraph.edges(graph, outEdges), 
         sparse = FALSE, attr = "Value_extraction") / 10000
+    ## Define the shares to be 1 if a single connection exists.  However, if a
+    ## node has multiple parents, give each parent an equal proportion of the
+    ## share.
+    shareMatrix = get.adjacency(subgraph.edges(graph, outEdges), 
+        sparse = FALSE)
+    shareMatrix = shareMatrix * 1/apply(shareMatrix, 1, sum) 
     reverseMatrix = t(shareMatrix)/t(rateMatrix)
     reverseMatrix[is.na(reverseMatrix) | !is.finite(reverseMatrix)] = 0
     ## reverseMatrix allows us to transfer quantities from a child to it's
