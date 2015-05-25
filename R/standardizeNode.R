@@ -15,11 +15,18 @@
 ##'     return.
 ##' }
 ##'
-##' @param graph The graph object created by the function
-##' constructGraph.
+##' @param graph The graph object created by the function constructGraph.
 ##' @param workingNode The nodes to be standardized
 ##' @param standardizeElement The attribute of the nodes to be
 ##' standardized.
+##' @param productionElement The column name of the production element in the
+##'   nodes of the graph.  Important if standardizeProduction = FALSE.
+##' @param standardizeProduction Logical.  Production values are not
+##'   standardized up the AUPUS commodity tree as they are already accounted for
+##'   in the AUPUS processing (i.e. the input from processing procedure). 
+##'   However, production will need to roll up when aggregating to higher level
+##'   groupings (e.g. oranges and mandarins from the oranges tree and mandarins
+##'   tree).
 ##' 
 ##' @return A graph object that has been updated according to the description
 ##' above.
@@ -27,7 +34,8 @@
 ##' @export
 ##' 
 
-standardizeNode = function (graph, workingNode, standardizeElement){
+standardizeNode = function (graph, workingNode, standardizeElement,
+                            productionElement, standardizeProduction = FALSE){
 
     ## Get the edges and the construct the reverse matrix
     outEdges = E(graph)[from(V(graph)[workingNode])]
@@ -62,34 +70,16 @@ standardizeNode = function (graph, workingNode, standardizeElement){
                                      index = V(graph)[colnames(shareMatrix)])
             })),
         ncol = length(standardizeElement))
+    colnames(valueMatrix) = standardizeElement
 
     ## Standardize children up to parents
     standardizedMatrix = reverseMatrix %*% ifelse(is.na(valueMatrix), 0, valueMatrix)
+    ## If production is not intended to be standardized, then replace that column of standardizedMatrix with the original column of valueMatrix.
+    if(!standardizeProduction){
+        standardizedMatrix[, colnames(standardizedMatrix) == productionElement] =
+            valueMatrix[, colnames(valueMatrix) == productionElement]
+    }
 
-    ###########################################################################
-    ## Josh: Calculations above seem off.  If we standardize back a processed
-    ## value but don't remove inputFromProcessing counts, it seems that we'll
-    ## be double-counting.  So, we may need to remove that here (but only for
-    ## element 51).
-    ## 
-    ## if(TRUE){
-    ##     inputFromProcessing = data.table(
-    ##         parents = get.edgelist(graph)[, 2],
-    ##         inputs = get.edge.attribute(graph, "Value_input")
-    ##     )
-    ##     inputFromProcessing = inputFromProcessing[, list(input = sum(inputs)),
-    ##                                                by = parents]
-    ##     standardizedMatrix = data.frame(standardizedMatrix,
-    ##                         parents = rownames(standardizedMatrix))
-    ##     standardizedMatrix = merge.data.frame(standardizedMatrix,
-    ##                                           inputFromProcessing, all.x = TRUE)
-    ##     standardizedMatrix$X1 = standardizedMatrix$X1 - standardizedMatrix$input
-    ##     standardizedMatrix = as.matrix(standardizedMatrix[, paste0("X", 1:8)])
-    ##     standardizedMatrix[is.na(standardizedMatrix)] = 0
-    ##     colnames(standardizedMatrix) = NULL
-    ##     rownames(standardizedMatrix) = rownames(reverseMatrix)
-    ## }
-        
     ## Save the target value back to the graph, and the intermediate
     ## to the intermediate value matrix
     for(i in 1:length(standardizeElement)){
