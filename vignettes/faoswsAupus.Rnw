@@ -52,7 +52,7 @@ statistical working system}
   Food and Agriculture Organization of the United Nations (FAO)\\
   Viale delle Terme di Caracalla 00153 Rome, Italy\\
   E-mail: \email{joshua.browning@fao.org, michael.kao@fao.org}\\
-  URL: \url{https://svn.fao.org/projects/SWS/RModules/faoswsAupus/}
+  URL: \url{https://github.com/SWS-Methodology/faoswsAupus}
 }
 
 \begin{document}

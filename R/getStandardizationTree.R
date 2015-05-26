@@ -6,6 +6,10 @@
 ##'   in the AUPUS process.  This argument is needed because it provides a way
 ##'   to overwrite the default extraction rates with country specific ones, if
 ##'   available.
+##' @param defaultOnly Logical.  Should only default extraction rates be used? 
+##'   Or should country-specific rates be used when available and default rates 
+##'   used in all other cases?  The old methodology isn't clear about what is 
+##'   used.
 ##' 
 ##' @result A data.table object containing 4 columns: child, parent,
 ##'   extractionRate, and caloriesOnly.  The child and parent columns contain
@@ -15,7 +19,7 @@
 ##'   quantities.
 ##' 
 
-getStandardizationTree = function(aupusData){
+getStandardizationTree = function(aupusData, defaultOnly = FALSE){
     
     ## Data Quality Checks
     if(length(unique(aupusData$extractionRateData$geographicAreaFS)) > 1){
@@ -66,13 +70,16 @@ getStandardizationTree = function(aupusData){
     ## Extraction rate is wrongly defined as it's reciprical:
     newTree[, extractionRate := 1/extractionRate]
     
-    ## Overwrite extraction rates with country specific rates, if available.
-    newTree = merge.data.frame(newTree, aupusData$extractionRateData,
-                               by.x = "child", by.y = "measuredItemChildFS",
-                               all.x = TRUE)
-    newTree = data.table(newTree)
-    newTree[!is.na(Value_extraction), extractionRate := Value_extraction]
-    newTree[, c("Value_extraction", "flagFaostat_extraction") := NULL]
+    ## Overwrite extraction rates with country specific rates, if available and
+    ## if desired (i.e. defaultOnly = FALSE).
+    if(!defaultOnly){
+        newTree = merge.data.frame(newTree, aupusData$extractionRateData,
+                                   by.x = "child", by.y = "measuredItemChildFS",
+                                   all.x = TRUE)
+        newTree = data.table(newTree)
+        newTree[!is.na(Value_extraction), extractionRate := Value_extraction]
+        newTree[, c("Value_extraction", "flagFaostat_extraction") := NULL]
+    }
     
     ## Country specific data may overwrite extraction rates with productivity
     ## factors, as different things are stored in element 41 in the old system

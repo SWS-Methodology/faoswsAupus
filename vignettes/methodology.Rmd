@@ -1,0 +1,102 @@
+---
+title: "Standardization Methodology"
+output: word_document
+---
+
+## Introduction
+
+The data we collect for food balance sheets is usually at the primary level (e.g. wheat, milk, etc.).  However, there are several exceptions: first, some countries may report production of non-primary products (flour, beer, etc.) but this is not commonly the case.  Additionally, trade information is provided in great detail: we may know how much bread went from country A to country B.  We must account for these trade imbalances within the commodity balances (for example, we must consider the trade imbalance of bread in the wheat commodity tree).  One approach would be to simply roll-up all trade imbalances into the top level equivalent (i.e. wheat, in this example) but there are further complications.  Processing of wheat into flour creates bran and germ, and these products are almost entirely put into feed utilization.  Thus, it is important to also account for processing of top level products.
+
+Therefore, we take the following approach in creating the food balance sheets:
+
+1. We start with the "primary" commodities: wheat, barley, milk, etc.
+    * If some elements of the balance are missing (i.e. our modules have failed to impute them), then these values should be imputed using the old FBS methodology (as a ratio of production, total supply, etc.).
+    * Now, we must balance at this primary level.  Balancing is done by maximum likelihood, and so measurement error is allocated to all elements (with more error allocated to elements with larger estimated variances).
+2. Now, the amount allocated to food for processing for the primary commodity is to be converted into production at the first processed level (flour, butter, etc.) if the values at that level are missing (otherwise the official data is used).  Note: if official data is available at this level, this should inform the shares or the food for processing from the primary commodity but should not be used to compute the extraction rate.  **How does this drive what we do on the primary level?  If this is the only child, then we just update the food for processing from the primary.  But, if there are multiple children (some without official data) then does this knowledge inform an adjustment to the food or the shares or both?**  This conversion is done in the following way:
+    a. Some of the primary commodity may be eaten as such, and hence the percent going to processing should be determined and a quantity then removed from food for processing.
+    b. The shares (which specifies how the processed commodity should be allocated to all of it's available children) is applied to allocate the amount processed into it's various children.
+    c. The extraction rate (which specifies a sort of conversion rate from a parent commodity to it's child) should be applied to convert the processed parent commodity into quantity of the child.
+For example, suppose we want to create flour production from wheat.  We may have 90\% of wheat being processed (and 10\% left as such), 95\% of processed wheat that is allocated to flour and 5\% allocated to beer, and an 80\% extraction rate of wheat to flour.  Then, if we had 100 thousand tons of wheat, we would convert this to 100(90\%)(95\%)(80\%) = 68.4 thousand tons of flour.
+3. In the above step, we must also be careful to create all appropriate elements as specified by the tree structure.  For example, bran and germ are also created when wheat is processed into flour.  These are not elements with separate shares but should be thought of as by-products in the creation of flour.
+<!---
+ORIGINAL TEXT FOR PROCESSING DOWN MULTIPLE LEVELS
+4. We continue steps 1-3 and process commodities down the commodity tree and balance at each step until we reach a point where no further processing is required.  For example, wheat must be processed down into flour so we can create bran and germ (as these elements often get allocated to feed).  However, it does not need to be processed into bread, as no important information is gained in that process.  Another interesting example is the barley tree: barley must be processed into barley malt and then barley beer, and this processing must occur because alcoholic products are placed in a different group in the standardization (i.e. aggregation) of the commodity tree.  Note that as we process down, the production of the processed commodities must be fixed in order to ensure the parent commodities remain balanced.
+
+When balancing a "terminal node" (i.e. a node whose food value will not go into a processed commodity) we must standardize all lower commodities back to this node.  This ensures the entire tree is balanced down to the terminal node.  As an example, consider the wheat tree.  First, we balance wheat.  Then, food from the wheat balance becomes production of flour (after conversion by shares, extraction rates, and processing rate).  We also standardize all traded children commodities (bread, biscuits, etc.) into flour and then balance flour.-->
+4. We now balance at the first processed level.  However, we must standardize all further processed commodities back to this commodity in this balance in order to ensure we've accounted for any imbalances further down the commodity tree.
+5. We can now compute nutrient information (calories, proteins, fats) from quantities.
+6. Now, we must standardize everything back up to it's primary equivalent.  We start at the lowest nodes and divide by extraction rates to compute parent quantites.  Calories, on the other hand, can be added directly in the standardization process.  **Is this right???**  However, there are several special cases/important notes:
+    * With "by-products" (for example, wheat bran and germ) we do not standardize quantities as they are already accounted for in the main product standardization.  However, standardization of calories/fats/proteins is performed for all products by adding the calorie/fat/protein values.
+    * Some products (oils, juices, beers, etc.) can be created from multiple parents.  In this case, the products must be rolled up into various parents, and the appropriate allocation to parents is not clear.  We may use shares to determine this allocation, but we could have problems if a country has a large trade deficit in a child and little availability in a parent (or even larger problems if default shares are used and a country does not actually produce or trade a parent).  Thus, allocation should be generally done based on availability.  However, in some cases we need to be able to specify that preference be given to certain parents.  An example of this could be beer where preference should be given to barley over, say, bananas, wheat, etc.
+    * Separate trees may be used for processing vs. standardizing, as some commodities do not roll up into their respective parents (e.g. beer is not in cereals and butter is not in milk).
+    * Production should **not** be standardized.  This is because production of children commodities come directly from food of parent commodities, and so essentially they are already accounted for.  All other elements should be standardized, though.  Alternatively, we could standardize production if we deduct input from processing values, but that seems to add complication to the standardization procedure and it is not clear if this will improve our estimates.
+
+## Example
+
+Consider a very simple example of the wheat tree.  In this example, we would need distributions to perform the balances, but that is ignored for this example and balances are simply done arbitrarily to avoid complication.  Also, we assume there is only production, imports, exports, food and waste.  Dashes indicate unavailable data.
+
+1. Initial Table
+
+    |   | Prod. | Imp. | Exp. | Food | Waste | Food for Processing |
+    |---|-------|------|------|------|-------|---------------------|
+    | Wheat | 90 | 20 | 10 | - | 5 | 100 |
+    | Flour | - | 30 | 5 | - | 0 | 0 |
+    | Biscuits | - | 0 | 10 | - | 0 | 0 |
+    | Bread | - | 0 | 10 | - | 0 | 0 |
+
+2. Balance Wheat:
+
+    |   | Prod. | Imp. | Exp. | Food | Waste | Food for Processing |
+    |---|-------|------|------|------|-------|---------------------|
+    | Wheat | 90 | 20 | 10 | - | **2** | **98** |
+    | Flour | - | 30 | 5 | - | 0 | 0 |
+    | Biscuits | - | 0 | 10 | - | 0 | 0 |
+    | Bread | - | 0 | 10 | - | 0 | 0 |
+
+3. Process to flour (assuming an extraction rate of 0.84):
+
+    |   | Prod. | Imp. | Exp. | Food | Waste | Food for Processing |
+    |---|-------|------|------|------|-------|---------------------|
+    | Wheat | 90 | 20 | 10 | - | 2 | 98 |
+    | Flour | **82** | 30 | 5 | - | 0 | 0 |
+    | Biscuits | - | 0 | 10 | - | 0 | 0 |
+    | Bread | - | 0 | 10 | - | 0 | 0 |
+
+4. Create by-products (skipped for simplicity, but bran and germ should be created in this process).
+5. Standardize bread and biscuits (using extraction rates of 0.5 and 0.65):
+
+    |   | Prod. | Imp. | Exp. | Food | Waste | Food for Processing |
+    |---|-------|------|------|------|-------|---------------------|
+    | Wheat | 90 | 20 | 10 | - | 2 | 98 |
+    | Flour | 82 | 30 | **35** | - | 0 | 0 |
+    | Biscuits | - | 0 | 10 | - | 0 | 0 |
+    | Bread | - | 0 | 10 | - | 0 | 0 |
+
+6. Balance flour:
+
+    |   | Prod. | Imp. | Exp. | Food | Waste | Food for Processing |
+    |---|-------|------|------|------|-------|---------------------|
+    | Wheat | 90 | 20 | 10 | - | 2 | 98 |
+    | Flour | 82 | 30 | 35 | **77** | 0 | 0 |
+    | Biscuits | - | 0 | 10 | - | 0 | 0 |
+    | Bread | - | 0 | 10 | - | 0 | 0 |
+
+7. Standardize to wheat (using the 0.84 extraction rate):
+
+    |   | Prod. | Imp. | Exp. | Food | Waste | Food for Processing |
+    |---|-------|------|------|------|-------|---------------------|
+    | Wheat | 90 | 20 | 10 | **92** | 2 | 98 |
+    | Flour | 82 | 30 | 35 | 77 | 0 | 0 |
+    | Biscuits | - | 0 | 10 | - | 0 | 0 |
+    | Bread | - | 0 | 10 | - | 0 | 0 |
+
+Note that in this case, we have to overwrite the food for wheat because it's not really food (in the sense that it's not actually consumed here).  The food value here is more of an input to food processing, and so maybe we should add that element.  Then, when we standardize, we'll remove the input to food processing elements and only keep the (standardized) food values.
+
+One could make the argument that the exports of floor are now incorrect, as the reported/official figure was 5.  Thus, an alternative would be to allocate the imbalance from standardization to either Food for Processing or some new element:
+
+|   | Prod. | Imp. | Exp. | Food | Waste | Food for Processing |
+|---|-------|------|------|------|-------|---------------------|
+| Wheat | 90 | 20 | 10 | **92** | 2 | 98 |
+| Flour | 82 | 30 | 5 | 77 | 0 | 30 |
+| Biscuits | - | 0 | 10 | - | 0 | 0 |
+| Bread | - | 0 | 10 | - | 0 | 0 |

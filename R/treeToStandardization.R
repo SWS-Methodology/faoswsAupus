@@ -7,17 +7,21 @@
 ##' tree in place of the AUPUS tree.
 ##' 
 ##' @param aupusNetwork The network object, consisting of a list of two objects:
-##'   nodes and edges.  Each individual object is a data.table object.  See
+##'   nodes and edges.  Each individual object is a data.table object.  See 
 ##'   ?suaToNetworkRepresentation.
 ##' @param aupusData The list object containing the many different tables used 
-##'   in the AUPUS process.  This argument is needed because it provides a way
-##'   to overwrite the default extraction rates with country specific ones, if
+##'   in the AUPUS process.  This argument is needed because it provides a way 
+##'   to overwrite the default extraction rates with country specific ones, if 
 ##'   available.
+##' @param defaultOnly Logical.  Should only default extraction rates be used? 
+##'   Or should country-specific rates be used when available and default rates 
+##'   used in all other cases?  The old methodology isn't clear about what is 
+##'   used.
 ##'   
 ##' @result The aupusNetwork, updated with the new edges and nodes.
-##' 
+##'   
 
-treeToStandardization = function(aupusNetwork, aupusData){
+treeToStandardization = function(aupusNetwork, aupusData, defaultOnly = FALSE){
     
     ## Data Quality Checks
     if(length(unique(aupusData$extractionRateData$geographicAreaFS)) > 1){
