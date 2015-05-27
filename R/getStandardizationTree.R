@@ -33,27 +33,32 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
              "unclear which year should be used.")
     }
     
-    fbsTree = GetCodeTree(domain = "suafbs", dataset = "sua",
+    ## NOTE (Josh): Not sure which tree to use...
+#     fbsTree = GetCodeTree(domain = "suafbs", dataset = "sua",
+#                           dimension = "measuredItemSuaFbs")
+#     fbsTree = faoswsUtil::adjacent2edge(fbsTree)
+#     ## Everything standardizes up to S0000 and so remove it to get aggregates at
+#     ## finer levels.
+#     fbsTree = fbsTree[parent != "S0000", ]
+    fbsTree = GetCodeTree(domain = "suafbs", dataset = "fbs_balanced",
                           dimension = "measuredItemSuaFbs")
     fbsTree = faoswsUtil::adjacent2edge(fbsTree)
-    ## Everything standardizes up to S0000 and so remove it to get aggregates at
-    ## finer levels.
-    fbsTree = fbsTree[parent != "S0000", ]
+    ## Everything standardizes up to S2901, S2903, and S2941.  Remove these to
+    ## get aggregates at finer levels.
+    fbsTree = fbsTree[!parent %in% c("S2901", "S2903", "S2941"), ]
     ## Filter to just the relevant fbs codes
-    fbsTree = fbsTree[grepl("S[0-9]{4}", children), ]
+    fbsTree = fbsTree[grepl("S[0-9]{4}", parent), ]
+    fbsTree[!grepl("S", children), children := cpc2fcl(cpcCodes = children,
+                                                       returnFirst = TRUE)]
     load("~/Documents/Github/faoswsAupus/data/itemTree.RData")
     newTree = copy(itemTree)
     newTree[, c("itemName", "targetName", "fbsName", "incTot",
                 "aggCom", "weight", "target") := NULL]
-    ## Remove anything that's not aggregated to the FBS
-    newTree = newTree[!is.na(fbsCode), ]
-    ## For top nodes, set their parent to the FBS code and extraction rates to 1
-    ## (as there isn't really any extraction happening, just adding).
-    newTree[itemCode == targetCode, baseExtraction := 1]
+    ## For top nodes, remove them (as they're already included in fbsTree).
+    newTree = newTree[itemCode != targetCode, ]
     newTree[, targetCode := as.character(targetCode)]
     newTree[, itemCode := as.character(itemCode)]
-    newTree[itemCode == targetCode, targetCode := paste0("S", fbsCode)]
-    
+
     ## Clean up some things
     newTree[, fbsCode := NULL]
     newTree[, caloriesOnly := (convType == "(cal.)")]
@@ -69,7 +74,7 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
     newTree[is.na(caloriesOnly), caloriesOnly := FALSE]
     ## Extraction rate is wrongly defined as it's reciprical:
     newTree[, extractionRate := 1/extractionRate]
-    
+
     ## Overwrite extraction rates with country specific rates, if available and
     ## if desired (i.e. defaultOnly = FALSE).
     if(!defaultOnly){
