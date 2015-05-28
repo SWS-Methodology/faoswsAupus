@@ -43,9 +43,13 @@ buildEdges = function(dataList, aupusParam){
                      by = intersect(colnames(edgeData),
                                     colnames(dataList[["shareData"]])),
                      all.x = TRUE, all.y = FALSE)
-    setkeyv(edgeData, key(dataList$shareData))
     ## If no record exists in the shares dataset, assume the value is 0.
     edgeData[is.na(get(aupusParam$keyNames$shareName)),
              c(aupusParam$keyNames$shareName) := 0]
+    edgeData[, c(aupusParam$keyNames$itemParentName) :=
+                 as.character(get(aupusParam$keyNames$itemParentName))]
+    edgeData[, c(aupusParam$keyNames$itemChildName) :=
+                 as.character(get(aupusParam$keyNames$itemChildName))]
+    setkeyv(edgeData, key(dataList$shareData))
     edgeData
 }

@@ -36,6 +36,8 @@ buildNodes = function(dataList){
                                dataList$populationData[, populationColumns,
                                                        with = FALSE],
                                all.x = TRUE)
+    dataList$aupusData[, c(aupusParam$keyNames$itemName) :=
+                           as.character(get(aupusParam$keyNames$itemName))]
     setkeyv(dataList$aupusData, aupusKey)
     dataList$aupusData
 }

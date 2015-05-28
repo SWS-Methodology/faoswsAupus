@@ -43,15 +43,23 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
     fbsTree = GetCodeTree(domain = "suafbs", dataset = "fbs_balanced",
                           dimension = "measuredItemSuaFbs")
     fbsTree = faoswsUtil::adjacent2edge(fbsTree)
-    ## Everything standardizes up to S2901, S2903, and S2941.  Remove these to
-    ## get aggregates at finer levels.
-    fbsTree = fbsTree[!parent %in% c("S2901", "S2903", "S2941"), ]
+    fbsTree = unique(fbsTree)
+#     ## Everything standardizes up to S2901, S2903, and S2941.  Remove these to
+#     ## get aggregates at finer levels.
+#     fbsTree = fbsTree[!parent %in% c("S2901", "S2903", "S2941"), ]
     ## Filter to just the relevant fbs codes
     fbsTree = fbsTree[grepl("S[0-9]{4}", parent), ]
-    fbsTree[!grepl("S", children), children := cpc2fcl(cpcCodes = children,
-                                                       returnFirst = TRUE)]
+    fbsTree[!grepl("S", children), children :=
+                faoswsUtil::cpc2fcl(cpcCodes = children, returnFirst = TRUE)]
+    setnames(fbsTree, c("parent", "children"), c("parent", "child"))
+
     load("~/Documents/Github/faoswsAupus/data/itemTree.RData")
     newTree = copy(itemTree)
+    ## Convert codes to characters with four digits
+    newTree[, itemCode := formatC(itemCode, format = "g",
+                                  width = 4, flag = "0")]
+    newTree[, targetCode := formatC(targetCode, format = "g",
+                                    width = 4, flag = "0")]
     newTree[, c("itemName", "targetName", "fbsName", "incTot",
                 "aggCom", "weight", "target") := NULL]
     ## For top nodes, remove them (as they're already included in fbsTree).
@@ -67,7 +75,6 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
              c("child", "parent", "extractionRate"))
     
     ## Combine the two trees together
-    setnames(fbsTree, c("parent", "children"), c("parent", "child"))
     newTree = rbindlist(list(newTree, fbsTree), use.names = TRUE, fill = TRUE)
     ## Missing rates/calories from the fbsTree should all be 1/FALSE
     newTree[is.na(extractionRate), extractionRate := 1]

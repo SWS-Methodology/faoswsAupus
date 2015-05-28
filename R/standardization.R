@@ -32,12 +32,20 @@ standardization = function(graph, standardizeElement, plot, aupusParam,
                            productionElement = paste0(aupusParam$keyNames$valuePrefix,
                                                       aupusParam$keyNames$elementName,
                                                       "_51"), ...){
-    while (length(E(graph)) > 0) {
+    ## Set up an object to hold the standardized values as they are processed.
+    intermediateStandardization = NULL
+    edgeDT = data.table(get.data.frame(graph)[, 1:2])
+    processingLevelData = findProcessingLevel(edgeDT, from = "from", to = "to",
+                                              aupusParam = aupusParam)
+    totalLevels = max(processingLevelData$processingLevel) + 1
+    
+    ## totalLevels - 2 because we don't want to process the final level and
+    ## because the first level starts at 0.
+    for(level in 0:(totalLevels - 2)){
         ## Which nodes currently have no inputs but do have outputs?
-        workingNode =
-            names(which(degree(graph, mode = "in") == 0 &
-                        degree(graph, mode = "out") > 0))
-        if (plot){
+        workingNode = processingLevelData[processingLevel == level,
+                                          measuredItemFS]
+        if(plot){
             pathDistance = shortest.paths(graph, mode = "in")
             maxDistance = max(pathDistance[pathDistance < Inf])
             childNode = degree(graph, mode = "in") == 0 &
@@ -65,35 +73,31 @@ standardization = function(graph, standardizeElement, plot, aupusParam,
                    pch = 16, border = 1)
             readline("Continue processing?")
         }
-        graph = standardizeNode(graph = graph, 
-            workingNode = workingNode,
-            standardizeElement = standardizeElement,
-            productionElement = productionElement)
-#         intermediateStandardization = rbind(intermediateStandardization, 
-#             standardize$intermediateValues)
+        standardizedObject = standardizeNode(graph = graph,
+                                             workingNode = workingNode,
+                                             standardizeElement = standardizeElement,
+                                             productionElement = productionElement)
+        graph = standardizedObject$standardizedGraph
+        intermediateStandardization = rbind(intermediateStandardization, 
+            standardizedObject$intermediateValues)
     }
     terminalValueMatrix =
-        matrix(unlist(lapply(X = standardizeElement,
-                             FUN = function(x){
-                                 get.vertex.attribute(graph = graph,
-                                                      name = x)
-                             }
-                             )),
-               ncol = length(standardizeElement))
-    ## terminalValue = get.vertex.attribute(graph = graph,
-    ##     name = "Value_measuredElementFS_91")
+        do.call("cbind", lapply(X = standardizeElement,
+                                FUN = function(x){
+                                    get.vertex.attribute(graph = graph,
+                                                         name = x)
+                             }))
+    terminalValueMatrix = data.frame(terminalValueMatrix)
     colnames(terminalValueMatrix) = standardizeElement
-    terminalValueMatrix = data.table(item = V(graph)$name,
-                                     terminalValueMatrix)
-    setnames(terminalValueMatrix, old = "item", new = aupusParam$keyNames$itemName)
-#     fullStandardization =
-#         rbind(terminalValueMatrix,
-#               intermediateStandardization)
-#     fullStandardization = data.table(cbind(rownames(fullStandardization),
-#         fullStandardization))
-#     setnames(fullStandardization, old = colnames(fullStandardization),
-#              new = c(aupusParam$keyNames$itemName, standardizeElement))
-#     fullStandardization
-    terminalValueMatrix
+    terminalValueMatrix$measuredItem = V(graph)$name
 
+    fullStandardization =
+        rbind(terminalValueMatrix,
+              intermediateStandardization)
+    fullStandardization = data.table(fullStandardization)
+    setcolorder(fullStandardization, neworder = c("measuredItem",
+                                                  standardizeElement))
+    setnames(fullStandardization, old = "measuredItem",
+             new = aupusParam$keyNames$itemName)
+    fullStandardization
 }

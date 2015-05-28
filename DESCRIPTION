@@ -15,7 +15,7 @@ Imports:
     data.table (>= 1.9.2),
     reshape2 (>= 1.4),
     RJSONIO (>= 1.3-0),
-    faoswsUtil (>= 0.1.4)
+    faoswsUtil (>= 0.1.5)
 ZipData: no
 VignetteBuilder: knitr
 Suggests: knitr, ggplot2

@@ -35,7 +35,7 @@ treeToStandardization = function(aupusNetwork, aupusData, defaultOnly = FALSE){
              "unclear which year should be used.")
     }
     
-    newEdges = getStandardizationTree(aupusData)
+    newEdges = getStandardizationTree(aupusData, defaultOnly = defaultOnly)
     newNodes = aupusNetwork$nodes[1, colnames(aupusNetwork$nodes)[1:2],
                                   with = FALSE]
     valueCols = colnames(aupusNetwork$nodes)[grepl("Value",

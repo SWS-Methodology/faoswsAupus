@@ -84,8 +84,22 @@ standardizeNode = function (graph, workingNode, standardizeElement,
     standardizedMatrix[rowFilter, colnames(standardizedMatrix) == productionElement] =
         valueMatrix[rowFilter, colnames(valueMatrix) == productionElement]
 
-    ## Save the target value back to the graph, and the intermediate
-    ## to the intermediate value matrix
+    ## First, save the current state of all the nodes that are "working nodes",
+    ## i.e. all the nodes which are being standardized to the next level.  Their
+    ## information will soon be aggregated up in the graph, and so we want to
+    ## save their current state somewhere before that happens.
+    intermediateValuesMatrix =
+        do.call("cbind",
+                lapply(X = standardizeElement,
+                       FUN = function(x){
+                           get.vertex.attribute(graph = graph, name = x,
+                                                index = V(graph)[workingNode])
+                           }))
+    intermediateValuesMatrix = data.frame(intermediateValuesMatrix)
+    colnames(intermediateValuesMatrix) = standardizeElement
+    intermediateValuesMatrix$measuredItem = workingNode
+    
+    ## Now, we can update the graph with the new, standardized values.
     for(i in 1:length(standardizeElement)){
         graph = set.vertex.attribute(graph = graph,
                  name = standardizeElement[i],
@@ -93,27 +107,9 @@ standardizeNode = function (graph, workingNode, standardizeElement,
                  value = standardizedMatrix[, i])
     }
 
-###############################################################################
-##### NOTE (Josh): The intermediateValueMatrix computed here was previously
-#     giving values because the above for loop wasn't working (values were
-#     not being assigned and the graph would be processed but not updated.
-#     Once the graph is updated, all the child commodities have an
-#     "intermediate value" of 0, and so I have no idea what this matrix
-#     (below) would tell us.
-###############################################################################
-#     intermediateValuesMatrix =
-#         matrix(unlist(lapply(X = standardizeElement,
-#                              FUN = function(x){
-#                                  get.vertex.attribute(graph = graph, name = x,
-#                                                       index = V(graph)[workingNode])
-#                              })),
-#                ncol = length(standardizeElement))
-#     rownames(intermediateValuesMatrix) = workingNode
-
     ## Delete the standardized workingNodes
     graph = graph - vertices(workingNode)
 
     ## Return the objects
-#     list(standardizedGraph = graph, intermediateValues = intermediateValuesMatrix)
-     graph
+    list(standardizedGraph = graph, intermediateValues = intermediateValuesMatrix)
 }

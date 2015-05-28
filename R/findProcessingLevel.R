@@ -40,7 +40,7 @@ findProcessingLevel = function(edgeData, from, to, plot = FALSE, aupusParam){
     finalLevels = apply(processingLevel, 1,
         FUN = function(x) max(x[is.finite(x)], na.rm = TRUE))
 
-    finalLevels.dt = data.table(as.numeric(names(finalLevels)), finalLevels)
+    finalLevels.dt = data.table(names(finalLevels), finalLevels)
     setnames(finalLevels.dt,
              old = colnames(finalLevels.dt),
              new = c(aupusParam$keyNames$itemName, "processingLevel"))
