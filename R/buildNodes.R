@@ -6,6 +6,9 @@
 ##' @param dataList A list of AUPUS datasets to be analyzed, typically as
 ##' produced by the function getAupusDataset.  For more details on this
 ##' argument, please see ?getAupusDataset.
+##' @param aupusParam A list of running parameters to be used in pulling the data.
+##' Typically, this is generated from getAupusParameter (see that function for
+##' a description of the required elements).
 ##' 
 ##' @return A data.table with the node data.  Essentially, this is a data.table
 ##' containing all the variables meant to be stored in the nodes: AUPUS, input,
@@ -14,7 +17,7 @@
 ##' @export
 ##' 
 
-buildNodes = function(dataList){
+buildNodes = function(dataList, aupusParam){
     
     ## Data Quality Checks
     stopifnot(sapply(dataList, is.data.table))

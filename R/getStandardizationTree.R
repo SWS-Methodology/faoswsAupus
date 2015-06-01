@@ -51,10 +51,14 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
     fbsTree = fbsTree[grepl("S[0-9]{4}", parent), ]
     fbsTree[!grepl("S", children), children :=
                 faoswsUtil::cpc2fcl(cpcCodes = children, returnFirst = TRUE)]
+    ## Mapping to CPC can create NA's, remove those:
+    fbsTree = fbsTree[!is.na(children), ]
     setnames(fbsTree, c("parent", "children"), c("parent", "child"))
 
     load("~/Documents/Github/faoswsAupus/data/itemTree.RData")
     newTree = copy(itemTree)
+    ## Remove edges without parents
+    newTree = newTree[!is.na(targetCode), ]
     ## Convert codes to characters with four digits
     newTree[, itemCode := formatC(itemCode, format = "g",
                                   width = 4, flag = "0")]
@@ -74,7 +78,9 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
     setnames(newTree, c("itemCode", "targetCode", "baseExtraction"),
              c("child", "parent", "extractionRate"))
     
-    ## Combine the two trees together
+    ## Combine the two trees together, but first remove any duplicated children
+    ## (giving preference to newTree)
+    fbsTree = fbsTree[!child %in% newTree$child, ]
     newTree = rbindlist(list(newTree, fbsTree), use.names = TRUE, fill = TRUE)
     ## Missing rates/calories from the fbsTree should all be 1/FALSE
     newTree[is.na(extractionRate), extractionRate := 1]
@@ -84,14 +90,14 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
 
     ## Overwrite extraction rates with country specific rates, if available and
     ## if desired (i.e. defaultOnly = FALSE).
+    newTree = merge.data.frame(newTree, aupusData$extractionRateData,
+                               by.x = "child", by.y = "measuredItemChildFS",
+                               all.x = TRUE)
+    newTree = data.table(newTree)
     if(!defaultOnly){
-        newTree = merge.data.frame(newTree, aupusData$extractionRateData,
-                                   by.x = "child", by.y = "measuredItemChildFS",
-                                   all.x = TRUE)
-        newTree = data.table(newTree)
         newTree[!is.na(Value_extraction), extractionRate := Value_extraction]
-        newTree[, c("Value_extraction", "flagFaostat_extraction") := NULL]
     }
+    newTree[, c("Value_extraction", "flagFaostat_extraction") := NULL]
     
     ## Country specific data may overwrite extraction rates with productivity
     ## factors, as different things are stored in element 41 in the old system

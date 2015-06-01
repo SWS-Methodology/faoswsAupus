@@ -42,17 +42,24 @@ treeToStandardization = function(aupusNetwork, aupusData, defaultOnly = FALSE){
                                                    colnames(aupusNetwork$nodes))]
     newNodes = cbind(newNodes, aupusNetwork$nodes[1, valueCols, with = FALSE])
     newNodes[, c(valueCols) := 0]
+    
+    ## Rewrite the measuredItemFS code on nodes to have four digits
+    aupusNetwork$nodes[, measuredItemFS := formatC(as.numeric(measuredItemFS),
+                                                   format = "g", width = 4,
+                                                   flag = "0")]
     missingNodes = newEdges[, union(measuredItemChildFS, measuredItemParentFS)]
     missingNodes = missingNodes[!missingNodes %in%
                                     aupusNetwork$nodes$measuredItemFS]
     
-    ## To merge with data.table, you need a column in each data.table with the
-    ## same name.  It seems easiest to just add a dummy column here that will
-    ## always merge, as we're assuming we only have one year.
-    year = unique(aupusData$extractionRateData$timePointYearsSP)
-    newNodes = merge(data.table(measuredItemFS = missingNodes,
-                                timePointYearsSP = year), newNodes,
-                     by = "timePointYearsSP")
+    if(length(missingNodes) > 0){
+        ## To merge with data.table, you need a column in each data.table with 
+        ## the same name.  It seems easiest to just add a dummy column here that
+        ## will always merge, as we're assuming we only have one year.
+        year = unique(aupusData$extractionRateData$timePointYearsSP)
+        newNodes = merge(data.table(measuredItemFS = missingNodes,
+                                    timePointYearsSP = year), newNodes,
+                         by = "timePointYearsSP")
+    }
     
     ## Update the network
     aupusNetwork$edges = newEdges
