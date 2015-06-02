@@ -36,7 +36,7 @@ calculateEle11 = function(data, aupusParam){
         data[, get(itemTypeCol) %in% c(2:10, 13, 19:22, 25:28, 30, 57) &
                   replaceable(get(element11Symb), newValue)]
     data[replaceIndex1, `:=` (c(element11Num, element11Symb),
-                              .(newValue, newSymbol))]
+                              list(newValue, newSymbol))]
     data[, `:=` (c("newValue", "newSymbol"), NULL)]                         
     which(replaceIndex1)
 }
