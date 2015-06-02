@@ -49,6 +49,13 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
 #     fbsTree = fbsTree[!parent %in% c("S2901", "S2903", "S2941"), ]
     ## Filter to just the relevant fbs codes
     fbsTree = fbsTree[grepl("S[0-9]{4}", parent), ]
+    ## HACK!  There's an issue with the mapping from CPC to FCL: the CPC code
+    ## 0112 maps to multiple FCL codes (Maize, White Maize, and Popcorn).  Maize
+    ## should be classified under S2514 (Maize and Products) while White Maize
+    ## belongs under S2520 (Other Cereals).  Removing it from the tree here
+    ## causes all Maize to standardize to 2514, which should be very accurate in
+    ## most cases.
+    fbsTree = fbsTree[children != "0112" | parent != "S2520", ]
     fbsTree[!grepl("S", children), children :=
                 faoswsUtil::cpc2fcl(cpcCodes = children, returnFirst = TRUE)]
     ## Mapping to CPC can create NA's, remove those:

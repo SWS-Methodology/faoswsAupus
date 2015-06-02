@@ -43,7 +43,7 @@ Aupus = function(aupusNetwork, aupusParam){
     nodes[processingLevelData, processingLevel := i.processingLevel]
     nodes[is.na(processingLevel), processingLevel := as.numeric(0)]
 
-    for(currentLevel in unique(nodes$processingLevel)){
+    for(currentLevel in sort(unique(nodes$processingLevel))){
         
         ## Step (0): Grab the subset of nodes at this processing level
         nodesCurrentLevel = nodes[processingLevel == currentLevel, ]
