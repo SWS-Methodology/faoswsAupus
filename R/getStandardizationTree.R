@@ -33,6 +33,10 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
              "unclear which year should be used.")
     }
     
+    ## Make a copy of aupusData locally.  This prevents changes within this
+    ## function from modifying the actual aupusData object.
+    aupusData = copy(aupusData)
+    
     ## NOTE (Josh): Not sure which tree to use...
 #     fbsTree = GetCodeTree(domain = "suafbs", dataset = "sua",
 #                           dimension = "measuredItemSuaFbs")
@@ -97,12 +101,15 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
 
     ## Overwrite extraction rates with country specific rates, if available and
     ## if desired (i.e. defaultOnly = FALSE).
+    aupusData$extractionRateData[, measuredItemChildFS :=
+                                     formatC(measuredItemChildFS, width = 4,
+                                             flag = "0")]
     newTree = merge.data.frame(newTree, aupusData$extractionRateData,
                                by.x = "child", by.y = "measuredItemChildFS",
                                all.x = TRUE)
     newTree = data.table(newTree)
     if(!defaultOnly){
-        newTree[!is.na(Value_extraction), extractionRate := Value_extraction]
+        newTree[!is.na(Value_extraction), extractionRate := Value_extraction / 10000]
     }
     newTree[, c("Value_extraction", "flagFaostat_extraction") := NULL]
     
