@@ -13,7 +13,7 @@
 ##'     producing factor) in the next year; if this is unavailable then element
 ##'     31 (actual producing factor) in the next year is used; then element 21
 ##'     in the current year; and lastly element 31 in the current year.  The
-##'     value for element 111 is then filled in as this computed seed value
+##'     value for element 111 is then filled in as this computed area value
 ##'     times R_171 divided by 1000.
 ##' }
 ##' 
@@ -64,11 +64,12 @@ calculateEle111 = function(stotal, data, aupusParam){
         ele21t0 = subData[, get(element21Num)]
         ele31t0 = subData[, get(element31Num)]
         computed.mat = cbind(ele21t1, ele31t1, ele21t0, ele31t0) *
-            subData[, get(ratio171Num)]
+            subData[, get(ratio171Num)/1000]
         ## Use one of these four elements, in the order of priority 21t1, 31t1,
         ## 21t0, 31t0.  The na.omit(x)[1] function will pull the first
         ## non-missing value and use that.
         proposedValue = apply(computed.mat, 1, FUN = function(x) na.omit(x)[1])
+        ## Multiply by seeding rate:
         replaceIndex = which(subData[, !is.na(get(ratio171Num)) &
                                  replaceable(get(element111Symb), newValue)])
         newValue[replaceIndex] = proposedValue[replaceIndex]
