@@ -2,40 +2,39 @@
 ##' 
 ##' This function pulls the tree for standardization.
 ##' 
-##' @param aupusData The list object containing the many different tables used 
-##'   in the AUPUS process.  This argument is needed because it provides a way
-##'   to overwrite the default extraction rates with country specific ones, if
-##'   available.
+##' @param aupusER The extraction rate table from the AUPUS data object.  This
+##'   argument is needed because it provides a way to overwrite the default
+##'   extraction rates with country specific ones, if available.
 ##' @param defaultOnly Logical.  Should only default extraction rates be used? 
 ##'   Or should country-specific rates be used when available and default rates 
 ##'   used in all other cases?  The old methodology isn't clear about what is 
 ##'   used.
-##' 
-##' @result A data.table object containing 4 columns: child, parent,
-##'   extractionRate, and caloriesOnly.  The child and parent columns contain
-##'   character values of the items, extractionRate contains the extraction
-##'   rates, and caloriesOnly is a logical indicating if the edge of interest
-##'   corresponds to an aggregation of just calories or both calories and
+##'   
+##' @result A data.table object containing 4 columns: child, parent, 
+##'   extractionRate, and caloriesOnly.  The child and parent columns contain 
+##'   character values of the items, extractionRate contains the extraction 
+##'   rates, and caloriesOnly is a logical indicating if the edge of interest 
+##'   corresponds to an aggregation of just calories or both calories and 
 ##'   quantities.
-##' 
+##'   
 
-getStandardizationTree = function(aupusData, defaultOnly = FALSE){
+getStandardizationTree = function(aupusER, defaultOnly = FALSE){
     
     ## Data Quality Checks
-    if(length(unique(aupusData$extractionRateData$geographicAreaFS)) > 1){
+    if(length(unique(aupusER$geographicAreaFS)) > 1){
         stop("Multiple countries have been supplied in the passed AUPUS data.",
              " No specific extraction rates can then be used because it's ",
              "unclear which country should be used.")
     }
-    if(length(unique(aupusData$extractionRateData$timePointYearsSP)) > 1){
+    if(length(unique(aupusER$timePointYearsSP)) > 1){
         stop("Multiple years have been supplied in the passed AUPUS data. ",
              "No specific extraction rates can then be used because it's ",
              "unclear which year should be used.")
     }
     
-    ## Make a copy of aupusData locally.  This prevents changes within this
-    ## function from modifying the actual aupusData object.
-    aupusData = copy(aupusData)
+    ## Make a copy of aupusER locally.  This prevents changes within this
+    ## function from modifying the actual aupusER object.
+    aupusER = copy(aupusER)
     
     ## NOTE (Josh): Not sure which tree to use...
 #     fbsTree = GetCodeTree(domain = "suafbs", dataset = "sua",
@@ -65,8 +64,24 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
     ## Mapping to CPC can create NA's, remove those:
     fbsTree = fbsTree[!is.na(children), ]
     setnames(fbsTree, c("parent", "children"), c("parent", "child"))
+    ## HACK!  The FBS tree needs some modifications.  These should be done on
+    ## the SWS rather than here.
+    fbsTree = rbindlist(list(fbsTree, data.table(parent = "S2542",
+                                                 child = "0162")))
+    fbsTree = rbindlist(list(fbsTree, data.table(parent = "S2520",
+                                                 child = "0068")))
+    fbsTree = rbindlist(list(fbsTree, data.table(parent = "S2919",
+                                                 child = "S2615")))
+    fbsTree = rbindlist(list(fbsTree, data.table(parent = "S2512",
+                                                 child = "0027")))
+    fbsTree = rbindlist(list(fbsTree, data.table(parent = "S2541",
+                                                 child = "0163")))
 
-    load("~/Documents/Github/faoswsAupus/data/itemTree.RData")
+    if(Sys.info()[4] == "JOSH_LAPTOP"){
+        load("~/GitHub/faoswsAupus/data/itemTree.RData")
+    } else {
+        load("~/Documents/Github/faoswsAupus/data/itemTree.RData")
+    }
     newTree = copy(itemTree)
     ## Remove edges without parents
     newTree = newTree[!is.na(targetCode), ]
@@ -101,13 +116,22 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
 
     ## Overwrite extraction rates with country specific rates, if available and
     ## if desired (i.e. defaultOnly = FALSE).
-    aupusData$extractionRateData[, measuredItemChildFS :=
-                                     formatC(measuredItemChildFS, width = 4,
+    aupusER[, measuredItemChildFS := formatC(measuredItemChildFS, width = 4,
                                              flag = "0")]
-    newTree = merge.data.frame(newTree, aupusData$extractionRateData,
-                               by.x = "child", by.y = "measuredItemChildFS",
-                               all.x = TRUE)
+    newTree = merge.data.frame(newTree, aupusER, by.x = "child",
+                               by.y = "measuredItemChildFS", all.x = TRUE)
     newTree = data.table(newTree)
+
+    ## HACK!  Some of the extraction rates being used are wrong.
+    ## See page 88 of annexes-part-II.pdf
+    newTree[parent == "0512" & child == "0514", extractionRate := 0.1]
+    ## See page 98 of annexes-part-II.pdf
+    newTree[parent == "0882" & child == "0898", extractionRate := 1/10.527]
+    newTree[parent == "0882" & child == "0899", extractionRate := 1/11.2785]
+    newTree[parent == "0882" & child == "0917", extractionRate := 1/35.091]
+    ## See page 111 of annexes-part-II.pdf
+    newTree[parent == "0312" & child == "0311", extractionRate := 0.5]
+
     if(!defaultOnly){
         newTree[!is.na(Value_extraction), extractionRate := Value_extraction / 10000]
     }
@@ -119,7 +143,17 @@ getStandardizationTree = function(aupusData, defaultOnly = FALSE){
     ## adjust these back.  Find these cases as children which are only numeric
     ## codes but parents with S + numeric codes.
     newTree[grepl("^[0-9]", child) & grepl("S", parent), extractionRate := 1]
-    
+
+    ## HACK!  The tree still needs some modifications.
+    ## See page 104 of annexes-part-II.pdf
+    newTree[parent == "S2805" & child == "0027", extractionRate := 1/0.667]
+    ## See page 104 of annexes-part-II.pdf
+    newTree[parent == "S2512" & child == "0027", extractionRate := 1/0.78]
+    ## See page 105 of annexes-part-II.pdf
+    newTree[parent == "S2556" & child == "0242", extractionRate := 1/0.7]
+    ## See page 111 of annexes-part-II.pdf
+    newTree[parent == "S2818" & child == "0162", extractionRate := 1/0.92]
+
     ## Reformat so it's similar to aupus edges
     setnames(newTree, c("child", "parent", "extractionRate"),
              c("measuredItemChildFS", "measuredItemParentFS",
