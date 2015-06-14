@@ -1,0 +1,10 @@
+Structure defined by O-I list (Annex 2)
+autocuts modifies the SUA tree
+Annex 0 defines commodities with 0 weight, these become targets in standardization
+Standardization shares determined by production proportions.  If no production is available, then shares are determined by defaults in Annex 2.
+It's unclear where weights come from.  But, weights are almost always 1 or 0, and the zero weights are defined by Annex 0.  The special cases are 46 to 45 (0.5612) and 48 to 45 (0.4388); 575 to 574 (0.5455) and 576 to 574 (0.4545); 580 to 574 (0.2647) and 575 to 574 (0.7353).
+
+
+Default conversion factors in annex 6.
+Notes:
+Extraction rate defaults to 100% if missing
