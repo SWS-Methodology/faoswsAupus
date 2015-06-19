@@ -108,12 +108,6 @@ conversionFactor[childID == "328", ] # Not sure what to do with this case
 # Construct standardization tree
 ###############################################################################
 
-## Reverse standardization direction for nodes which are set to be processed
-## forward.  This won't work, though, because production won't be computed
-## correctly.
-# suaTree[parentID == 158, c("childID", "parentID", "extractionRate")
-#         := list(parentID, childID, 1/extractionRate)]
-
 suaTree = unique(oiData[share > 0, c("parentID", "childID"), with = FALSE])
 suaTree = merge.data.frame(suaTree, weights[, c("commodityCode", "weight",
                                                 "caloriesOnly", "target"), with = FALSE],

@@ -2,7 +2,70 @@
 ##' 
 ##' This function standardizes the SUA level commodities using the logic 
 ##' implemented by Marteen Van't Reet in "Flexible Aggregation of FAO's Supply 
-##' Utilization Accounts"
+##' Utilization Accounts."
+##' 
+##' Below are some comments of interest about standardize.  These decisions may 
+##' seem arbitrary, but they were made to cause agreement between the numbers 
+##' produced from the R standardization and the existing FAOSTAT numbers.
+##' 
+##' \itemize{
+##' 
+##' \item Forward Standardization: For a few of commodities (in particular 
+##' sugar), standardization proceeds forward: even though raw sugar beet sugar 
+##' (159) is processed into sugar (162), we standardize to sugar.  This creates 
+##' some complexity in the code.  Moreover, it seems strange that sugar beets 
+##' (157) which are a parent of raw beet sugar (159) do not get standardized to 
+##' sugar (162) but instead remain in their own group in standardization.
+##' 
+##' \item Production: Production does not get standardized, as production of 
+##' (for example) flour (16) is computed based on the amount of wheat (15) 
+##' allocated to processing.  This leads to some complexity in the code as well,
+##' in particular when also accounting for forward standardization.  The code 
+##' simply leaves the production element fixed for each commodity, and then 
+##' reports production for all elements.  However, only elements of interest 
+##' will be included in the FAO roll-ups, and so this approach should be valid.
+##' 
+##' \item Autocuts: Some children do not get standardized to their parents (such
+##' as beer products).  These commodities should be specified in an autocuts 
+##' file, but examination of this file and the data showed that it was missing 
+##' many autocuts.  Thus, instead we force an autocut whenever a commodity is 
+##' listed as an FBS aggregate.  For example, Oil of sunflower seed (268) is a 
+##' child of sunflower seed (267) and is not specified in the autocuts file. 
+##' Thus, we would assume that oil of sunflower seed should be standardized to 
+##' sunflower seed.  However, this leads to wrong numbers, particularly as oil 
+##' of sunflower seed should be included in the oil aggregation (contained under
+##' FBS commodity code 2573).  Thus, any commodity code appearing as a component
+##' of the FBS commodity code was forced to be autocut.
+##' 
+##' \item Some edges of annex 6 (the default extraction rates used to construct 
+##' the trees, provided by Marteen van't Reet) go from a commodity to it's 
+##' grandchild. The problem with such a conversion is that if country specific 
+##' extraction rates become available, we miss the new information. For example,
+##' suppose we have a 75% extraction rate from wheat to flour and 75% from flour
+##' to bread. We could then write a default conversion rate of bread to wheat of
+##' 1/(.75*.75) = 1.7778.  But, we may obtain country specific information that 
+##' states the extraction from wheat to flour is 50%, and thus the conversion 
+##' from bread to wheat should be much different.  But, the default conversion 
+##' won't be updated to reflect this unless we change the two-level conversion 
+##' into the individual one level conversions.  This was done manually, but in 
+##' such a way that the product of the parent-child and child-grandchild 
+##' extraction rates will give the same parent-grandchild extraction rate as 
+##' originally provided.
+##' 
+##' \item 900 (Dry Whey) is a child of 903 (Whey, Fresh) and vice-versa.  One 
+##' must be removed, so we'll remove the edge from 900 to 903 (to agree with 
+##' documented commodity trees).
+##' 
+##' \item Weights of zero in the commodity tree were implemented via infinite 
+##' extraction rates.
+##' 
+##' \item Country specific extraction rates can overwrite the default extraction
+##' rates, and the default standardization shares are used only when no
+##' production exists for any of the parents.  If production does exist, then
+##' the standardization shares are proportioned according to the proportions of
+##' production of the parent.
+##' 
+##' }
 ##' 
 ##' @param aupusData A list of two data.table objects, the names of which should
 ##'   be "nodes" and "edges".  This object thus contains the AUPUS data.  This 
@@ -19,7 +82,7 @@
 ##'   primary commodity.  The second, fbsOutput, is a list of four data.tables, 
 ##'   each of the same format as suaOutput.  The first element of this list is 
 ##'   suaOutput standardized to the first FBS level, the second element is the 
-##'   second FBS level, etc.  Higher FBS levels simply group more commodities
+##'   second FBS level, etc.  Higher FBS levels simply group more commodities 
 ##'   together.
 ##'   
 
@@ -38,7 +101,13 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
 #                                        976, # Sheep (live-weight)
 #                                        1034, # Pig (live-weight)
 #                                        1057), ] # Chickens (live-weight)
-    suaTree = suaTree[childID == 162 | !childID %in% fbsTree$commodityID, ]
+    # suaTree = suaTree[childID == 162 | !childID %in% fbsTree$commodityID, ]
+    suaTree = suaTree[!childID %in% fbsTree$commodityID, ]
+    
+#     warning("Only using specific nodes at the top level!")
+#     topNodes = setdiff(aupusData$edges$measuredItemParentFS,
+#                        aupusData$edges$measuredItemChildFS)
+#     aupusData$edges = aupusData$edges[measuredItemParentFS %in% topNodes, ]
 
     ## Input checks
 
@@ -75,13 +144,20 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     ## derived from the production of wheat already).  We standardize everything
     ## backwards, and then edges marked as forwards (i.e. target == "F") get
     ## standardized down.
-    output = standardizationData[, list(
-        Value = ifelse(measuredElement != productionElement,
-                       sum(Value/extractionRate*share, na.rm = TRUE),
-                       sum(Value[parentID == childID]))),
-                                 by = c("timePointYearsSP", "geographicAreaFS",
-                                        "measuredElement", "parentID")]
+    output = standardizationData[measuredElement != productionElement, list(
+        Value = sum(Value/extractionRate*share, na.rm = TRUE)),
+        by = c("timePointYearsSP", "geographicAreaFS", "measuredElement", "parentID")]
+    ## Don't modify production elements!
+    outputProd = standardizationData[measuredElement == productionElement, ]
+    outputProd[, parentID := childID]
+    outputProd[, c("childID", "target", "extractionRate",
+                   "calorieExtractionRate", "share") := NULL]
+    outputProd = unique(outputProd)
+    ## Combine the two data.frames
+    output = rbind(output, outputProd)
+
     forwardEdges = specificTree[target == "F", ]
+    
     ## Hacking sugar tree!
     warning("HACK!  Manually editing the sugar tree (the only forward process) ",
             "because it's difficult to understand how to properly code it!")
@@ -91,10 +167,16 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     forwardEdges[, share := 1]
     outputForward = merge(output, forwardEdges,
                           by = c("parentID", "timePointYearsSP", "geographicAreaFS"))
-    update = outputForward[, list(Value = sum(Value*extractionRate*share,
-                                              na.rm = TRUE)),
-                  by = c("timePointYearsSP", "geographicAreaFS",
-                         "measuredElement", "childID")]
+    update = outputForward[measuredElement != productionElement,
+                           list(Value = sum(Value*extractionRate*share, na.rm = TRUE)),
+                           by = c("timePointYearsSP", "geographicAreaFS",
+                                  "measuredElement", "childID")]
+    outputForwardProd = outputForward[measuredElement == productionElement, ]
+    outputForwardProd[, childID := parentID]
+    outputForwardProd[, c("parentID", "target", "extractionRate",
+                          "calorieExtractionRate", "share") := NULL]
+    outputForwardProd = unique(outputForwardProd)
+    update = rbind(update, outputForwardProd)
     setnames(update, "childID", "parentID")
     ## Remove the old rows that got corrected in the update
     output = output[!output$parentID %in% forwardEdges$parentID, ]

@@ -38,6 +38,11 @@ getSpecificTree = function(aupusData, suaTree){
                                        "timePointYearsSP", "geographicAreaFS",
                                        "Value_extraction"), with = FALSE]
     specificTree[, Value_extraction := Value_extraction / 10000]
+    if(any(specificTree$Value_extraction == 0)){
+        warning("Removing extraction rates of 0: there is likely is some ",
+                "error in the AUPUS edge dataset provided.")
+        specificTree = specificTree[Value_extraction > 0, ]
+    }
     specificTree = merge(
         countrySuaTree, specificTree,
         by.x = c("parentID", "childID", "timePointYearsSP", "geographicAreaFS"),
