@@ -104,11 +104,6 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     # suaTree = suaTree[childID == 162 | !childID %in% fbsTree$commodityID, ]
     suaTree = suaTree[!childID %in% fbsTree$commodityID, ]
     
-#     warning("Only using specific nodes at the top level!")
-#     topNodes = setdiff(aupusData$edges$measuredItemParentFS,
-#                        aupusData$edges$measuredItemChildFS)
-#     aupusData$edges = aupusData$edges[measuredItemParentFS %in% topNodes, ]
-
     ## Input checks
 
     ## Make fbsElements the column names rather than numeric values
@@ -125,6 +120,11 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     ## Get the standardization tree using the country specific shares/extraction
     ## rates when available, and the default values otherwise.
     specificTree = getSpecificTree(aupusData = aupusData, suaTree = suaTree)
+    warning("HACK!  Assigning any nodes with target == 'T' to not standardize")
+    specificTree[target == "T", extractionRate := Inf]
+    warning("Hacking the pigmeat tree!  Pig skins roll up into pig ",
+            "meat, which doesn't make any sense.")
+    specificTree = specificTree[!(parentID == 1035 & childID == 1044), ]
 
     ## Merge the tree with the node data
     setnames(standardizationData, "measuredItemFS", "childID")
