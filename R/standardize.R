@@ -124,7 +124,16 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     specificTree[target == "T", extractionRate := Inf]
     warning("Hacking the pigmeat tree!  Pig skins roll up into pig ",
             "meat, which doesn't make any sense.")
-    specificTree = specificTree[!(parentID == 1035 & childID == 1044), ]
+    specificTree = specificTree[!(parentID == 1035 & childID %in% (1044:1047)), ]
+    warning("Hacking the Palm Oil tree!  Res Fatty Subst (1277) rolls up into ",
+            "Oil of Palm (257) on the trees, but shouldn't according to the ",
+            "documented commodity trees.")
+    specificTree = specificTree[!(parentID == 257 & childID == 1277), ]
+    warning("HACK! Not sure why, but it seems Citrus Juice (513 and 514) ",
+            "don't roll up into Citrus Fruit nes (512).  However, it seems ",
+            "513 and 514 do roll up for imports.  The logic for this is ",
+            "unknown.")
+    specificTree = specificTree[!(parentID == 512 & childID %in% 513:514), ]
 
     ## Merge the tree with the node data
     setnames(standardizationData, "measuredItemFS", "childID")
@@ -192,6 +201,9 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
         fun.aggregate = sum)
     
     ## Aggregate to FBS level
+    warning("HACK!  Updating the fbs tree because it seems that 254 does not "
+            ,"get rolled up into 2562!")
+    fbsTree[fbsID4 == 2562 & commodityID == 254, conversionFactor := 0]
     fbsAggregateTable = merge.data.frame(output, fbsTree,
                                          by.x = "measuredItemFS",
                                          by.y = "commodityID")
