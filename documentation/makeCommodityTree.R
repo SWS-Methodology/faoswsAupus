@@ -68,6 +68,11 @@ weights = fread(paste0(dataDir, "annex0.csv"))
 setnames(weights, c("plus", "commodityCode", "commodityName", "inGrandTotal",
                     "input", "output", "target", "weight", "Target",
                     "fbsTargetCode", "fbsTargetName", "caloriesOnly"))
+## HACK!  It seems that target = 'XXX' means that edge is removed from
+## standardization.  In all but one case, the children are targets and thus are
+## removed from standardization.  This hack changes the one edge that is not a
+## child.
+weights[commodityCode == 1273, Target := "Target"]
 
 ###############################################################################
 # Default Conversion Factors
@@ -148,6 +153,7 @@ suaTree[, calorieExtractionRate := ifelse(weight == "w=0" & caloriesOnly == "", 
 suaTree[, c("weight", "caloriesOnly") := NULL]
 
 fbsTree = fread(paste0(dataDir, "annex8.csv"))
+
 ## Use fbsID4 for easier merging later on
 setnames(fbsTree, c("fbsID4", "fbsName", "commodityID",
                     "commodityName", "conversionFactor"))
@@ -157,5 +163,9 @@ setnames(fbsHierarchy, c("fbsID1", "fbsID2", "fbsID3", "fbsID4"))
 fbsTree = merge(fbsTree, fbsHierarchy, by = "fbsID4")
 setcolorder(fbsTree, c("commodityID", "conversionFactor", "fbsID4",
                        "fbsID3", "fbsID2", "fbsID1"))
+## HACK!  Oil of Veget Origin nes (340) rolled up into other oils, but it seems 
+## this may not be giving the correct numbers.  Let's try removing it from the
+## FBS tree.
+# fbsTree = fbsTree[commodityID != 340, ]
 
 save(fbsTree, suaTree, file = "~/Documents/Github/faoswsAupus/data/commodityTrees.RData")
