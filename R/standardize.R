@@ -134,6 +134,11 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
             "513 and 514 do roll up for imports.  The logic for this is ",
             "unknown.")
     specificTree = specificTree[!(parentID == 512 & childID %in% 513:514), ]
+    warning("HACK! It seems we can improve standardization by not rolling up ",
+            "anything into the oil trees.")
+    specificTree = specificTree[!(parentID %in% c(237, 244, 252, 258, 261,
+                                                  266, 268, 271, 290, 293,
+                                                  313, 331, 334)), ]
 
     ## Merge the tree with the node data
     setnames(standardizationData, "measuredItemFS", "childID")
