@@ -60,9 +60,9 @@
 ##' extraction rates.
 ##' 
 ##' \item Country specific extraction rates can overwrite the default extraction
-##' rates, and the default standardization shares are used only when no
-##' production exists for any of the parents.  If production does exist, then
-##' the standardization shares are proportioned according to the proportions of
+##' rates, and the default standardization shares are used only when no 
+##' production exists for any of the parents.  If production does exist, then 
+##' the standardization shares are proportioned according to the proportions of 
 ##' production of the parent.
 ##' 
 ##' }
@@ -76,6 +76,20 @@
 ##'   need to be modified (it has production (51), imports (61), exports (91), 
 ##'   feed (101), seed (111), waste (121), food (141), industrial uses (151), 
 ##'   and to stocks (71)).
+##' @param calorieElements The numeric codes for the elements which should be 
+##'   standardized via simple addition (i.e. calories, proteins, fats)
+##' @param productionElement The numeric code for production.  This code should
+##'   be specified separately as it is not standardized.
+##' @param fbsTree The commodity tree which specifies how a commodityID (the 
+##'   commodity code) aggregates to the FBS aggregates (fbsID4 < fbsID3 < fbsID2
+##'   < fbsID1).  Additionally, conversionFactor is a column which specifies how
+##'   items are rolled up, and is almost always 1.  Generally loaded from a 
+##'   file.
+##' @param suaTree The tree specifying how commodities should be standardized in
+##'   the SUA.  Required columns are childID, parentID (both commodity codes), 
+##'   extractionRate, target (a flag indicating forward or backward 
+##'   standardization, or none) and calorieExtractionRate.  Generally loaded 
+##'   from a file.
 ##'   
 ##' @return A list of two elements: suaOutput and fbsOutput.  The first, 
 ##'   suaOutput, is a data.table with the SUA data standardized back to the 
@@ -87,14 +101,12 @@
 ##'   
 
 standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
-                                                  141, 151, 71), fbsTree, suaTree){
-    productionElement = 51
-    ## Load fbsTree and suaTree
+                                                  141, 151, 71),
+                       calorieElements = c(261, 271, 281),
+                       productionElement = 51, fbsTree, suaTree){
     
-#     warning("Hacking the fbsTree to switch some Vegetables, Other with ",
-#             "Fruits, Other")
-#     fbsTree
-    
+    groupKey = c("timePointYearsSP", "geographicAreaFS", "measuredItemFS")
+
     warning("Hacking the commodity tree!  These fixes are not stable!")
 #     suaTree = suaTree[!parentID %in% c(267, # Sunflower Seed
 #                                        866, # Cattle (live-weight)
@@ -108,20 +120,11 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
 
     ## Make fbsElements the column names rather than numeric values
     fbsElements = paste0("Value_measuredElementFS_", fbsElements)
-    
-    ## Restructure the data for easier standardization
-    standardizationData = data.table:::melt.data.table(
-        data = aupusData$nodes, measure.vars = fbsElements,
-        id.vars = c("geographicAreaFS", "timePointYearsSP", "measuredItemFS"),
-        variable.name = "measuredElement", value.name = "Value")
-    standardizationData[, measuredElement := gsub("Value_measuredElementFS_", "",
-                                                  measuredElement)]
+    calorieElements = paste0("Value_measuredElementFS_", calorieElements)
     
     ## Get the standardization tree using the country specific shares/extraction
     ## rates when available, and the default values otherwise.
     specificTree = getSpecificTree(aupusData = aupusData, suaTree = suaTree)
-    warning("HACK!  Assigning any nodes with target == 'T' to not standardize")
-    specificTree[target == "T", extractionRate := Inf]
     warning("Hacking the pigmeat tree!  Pig skins roll up into pig ",
             "meat, which doesn't make any sense.")
     specificTree = specificTree[!(parentID == 1035 & childID %in% (1044:1047)), ]
@@ -139,105 +142,56 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     specificTree = specificTree[!(parentID %in% c(237, 244, 252, 258, 261,
                                                   266, 268, 271, 290, 293,
                                                   313, 331, 334)), ]
+    calorieTree = copy(specificTree)
+    warning("HACK!  Assigning any nodes with target == 'T' to not standardize")
+    specificTree[target == "T", extractionRate := Inf]
 
-    ## Merge the tree with the node data
-    setnames(standardizationData, "measuredItemFS", "childID")
-    standardizationData = merge(standardizationData, specificTree,
-                                by = c("timePointYearsSP", "geographicAreaFS",
-                                       "childID"), all.x = TRUE,
-                                allow.cartesian = TRUE)
-    
-    ##' If an element is not a child in the tree, then "standardize" it to
-    ##' itself with a rate of 1 and a share of 1.
-    standardizationData[is.na(parentID),
-                        c("parentID", "extractionRate", "calorieExtractionRate",
-                          "share") := list(childID, 1, 1, 1)]
-    ## Standardizing backwards is easy: we just take the value, divide by the 
-    ## extraction rate, and multiply by the shares.  However, we don't 
-    ## standardize the production element (because production of flour is 
-    ## derived from the production of wheat already).  We standardize everything
-    ## backwards, and then edges marked as forwards (i.e. target == "F") get
-    ## standardized down.
-    output = standardizationData[measuredElement != productionElement, list(
-        Value = sum(Value/extractionRate*share, na.rm = TRUE)),
-        by = c("timePointYearsSP", "geographicAreaFS", "measuredElement", "parentID")]
-    ## Don't modify production elements!
-    outputProd = standardizationData[measuredElement == productionElement, ]
-    outputProd[, parentID := childID]
-    outputProd[, c("childID", "target", "extractionRate",
-                   "calorieExtractionRate", "share") := NULL]
-    outputProd = unique(outputProd)
-    ## Combine the two data.frames
-    output = rbind(output, outputProd)
-
-    forwardEdges = specificTree[target == "F", ]
-    
-    ## Hacking sugar tree!
-    warning("HACK!  Manually editing the sugar tree (the only forward process) ",
-            "because it's difficult to understand how to properly code it!")
-    ## We don't want the 156 to 158 edge as this is an intermediate step.  And
-    ## shares should all be 1, as we're moving forward now.
-    forwardEdges = forwardEdges[childID == 162, ]
-    forwardEdges[, share := 1]
-    outputForward = merge(output, forwardEdges,
-                          by = c("parentID", "timePointYearsSP", "geographicAreaFS"))
-    update = outputForward[measuredElement != productionElement,
-                           list(Value = sum(Value*extractionRate*share, na.rm = TRUE)),
-                           by = c("timePointYearsSP", "geographicAreaFS",
-                                  "measuredElement", "childID")]
-    outputForwardProd = outputForward[measuredElement == productionElement, ]
-    outputForwardProd[, childID := parentID]
-    outputForwardProd[, c("parentID", "target", "extractionRate",
-                          "calorieExtractionRate", "share") := NULL]
-    outputForwardProd = unique(outputForwardProd)
-    update = rbind(update, outputForwardProd)
-    setnames(update, "childID", "parentID")
-    ## Remove the old rows that got corrected in the update
-    output = output[!output$parentID %in% forwardEdges$parentID, ]
-    ## Bind back in the corrected rows
-    output = rbind(output, update)
-    
-    setnames(output, "parentID", "measuredItemFS")
-    output[, measuredElement := paste0("Value_measuredElementFS_",
-                                       measuredElement)]
-    suaOutput = dcast.data.table(data = output,
-        formula = timePointYearsSP + geographicAreaFS +
-            measuredItemFS ~ measuredElement, value.var = "Value",
-        fun.aggregate = sum)
+    ## Standardize elements except production
+    suaOutput = standardizeTree(data = aupusData$nodes, tree = specificTree,
+                                elements = fbsElements[fbsElements != productionElement])
+    ## Add in production element
+    suaOutput = merge(aupusData$nodes[, c(groupKey, productionElement),
+                                        with = FALSE], suaOutput,
+                        by = groupKey)
+    ## Standardize other elements (calories, etc.)
+    calorieTree[, extractionRate := calorieExtractionRate]
+    ## Standardization is skipped by cases where target == "T", but by-products
+    ## (for example) can be assigned targets.  To ensure their calories are
+    ## standardized, we set all target flags to "B".
+    calorieTree[target == "T", target := "B"]
+    calorieData = standardizeTree(data = aupusData$nodes, tree = calorieTree,
+                                  elements = calorieElements)
+    suaOutput = merge(suaOutput, calorieData, by = groupKey)
     
     ## Aggregate to FBS level
     warning("HACK!  Updating the fbs tree because it seems that 254 does not "
             ,"get rolled up into 2562!")
     fbsTree[fbsID4 == 2562 & commodityID == 254, conversionFactor := 0]
-    fbsAggregateTable = merge.data.frame(output, fbsTree,
-                                         by.x = "measuredItemFS",
-                                         by.y = "commodityID")
-    fbsAggregateTable = data.table(fbsAggregateTable)
-    fbsOutput = list()
-    fbsOutput[[1]] = fbsAggregateTable[, list(Value = sum(Value * conversionFactor,
-                                                          na.rm = TRUE)),
-                                       by = c("timePointYearsSP", "geographicAreaFS",
-                                              "measuredElement", "fbsID4")]
-    fbsOutput[[2]] = fbsAggregateTable[, list(Value = sum(Value * conversionFactor,
-                                                          na.rm = TRUE)),
-                                       by = c("timePointYearsSP", "geographicAreaFS",
-                                              "measuredElement", "fbsID3")]
-    fbsOutput[[3]] = fbsAggregateTable[, list(Value = sum(Value * conversionFactor,
-                                                          na.rm = TRUE)),
-                                       by = c("timePointYearsSP", "geographicAreaFS",
-                                              "measuredElement", "fbsID2")]
-    fbsOutput[[4]] = fbsAggregateTable[, list(Value = sum(Value * conversionFactor,
-                                                          na.rm = TRUE)),
-                                       by = c("timePointYearsSP", "geographicAreaFS",
-                                              "measuredElement", "fbsID1")]
-    
-    ## Rename columns to be consistent across all fbs tables
-    lapply(fbsOutput, setnames, c("timePointYearsSP", "geographicAreaFS",
-                                  "measuredElement", "fbsID", "Value"))
-    ## Cast data to have a different format
-    fbsOutput = lapply(fbsOutput, dcast.data.table,
-        formula = timePointYearsSP + geographicAreaFS + fbsID ~ measuredElement,
-        value.var = "Value")
+    ## Modify fbsTree to apply to all years/countries (to merge, create a dummy column)
+    fbsTree[, dummyColumn := 1]
+    specificTree[, dummyColumn := 1]
+    fbsTree = merge(fbsTree,
+        unique(specificTree[, list(timePointYearsSP, geographicAreaFS, dummyColumn)]),
+        by = "dummyColumn", allow.cartesian = TRUE)
+    fbsTree[, dummyColumn := NULL]
+    setnames(fbsTree, c("commodityID", "conversionFactor"),
+             c("childID", "share"))
+    fbsTree[, extractionRate := 1]
+    fbsOutput = lapply(c("fbsID4", "fbsID3", "fbsID2", "fbsID1"), function(name){
+        setnames(fbsTree, old = name, new = "parentID")
+        out = standardizeTree(data = suaOutput, tree = fbsTree,
+                              elements = c(fbsElements, calorieElements))
+        setnames(fbsTree, old = "parentID", new = name)
+        return(out)
+    })
+
+#     ## Rename columns to be consistent across all fbs tables
+#     lapply(fbsOutput, setnames, c("timePointYearsSP", "geographicAreaFS",
+#                                   "measuredElement", "fbsID", "Value"))
+#     ## Cast data to have a different format
+#     fbsOutput = lapply(fbsOutput, dcast.data.table,
+#         formula = timePointYearsSP + geographicAreaFS + fbsID ~ measuredElement,
+#         value.var = "Value")
     
     return(list(suaOutput = suaOutput, fbsOutput = fbsOutput))
 }
