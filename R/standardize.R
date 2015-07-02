@@ -117,10 +117,6 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     suaTree = suaTree[!childID %in% fbsTree$commodityID, ]
     
     ## Input checks
-
-    ## Make fbsElements the column names rather than numeric values
-    fbsElements = paste0("Value_measuredElementFS_", fbsElements)
-    calorieElements = paste0("Value_measuredElementFS_", calorieElements)
     
     ## Get the standardization tree using the country specific shares/extraction
     ## rates when available, and the default values otherwise.

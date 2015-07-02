@@ -19,8 +19,7 @@
 ##'   in the tree.
 ##'   
 
-standardizeTree = function(data, tree, elements = c(51, 61, 91, 101, 111,
-                                                    121, 141, 151, 71)){
+standardizeTree = function(data, tree, elements){
 
     ## Data Quality Checks
     stopifnot(is(data, "data.table"))
