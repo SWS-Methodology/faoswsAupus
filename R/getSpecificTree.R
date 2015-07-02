@@ -78,6 +78,9 @@ getSpecificTree = function(aupusData, suaTree){
     specificTree[is.na(share), share := defaultShare]
     specificTree[, c("defaultShare", "production") := NULL]
     
+    warning("HACK!  We must remove any cycles with cotton (328->329 and 329->328)!")
+    specificTree = specificTree[!parentID == 328, ]
+    
     ## Collapse the tree so that each child is standardized directly to it's ancestor.
     specificTree = collapseEdges(edges = specificTree)
     

@@ -68,7 +68,7 @@ standardizeTree = function(data, tree, elements){
     ## derived from the production of wheat already).  We standardize everything
     ## backwards, and then edges marked as forwards (i.e. target == "F") get
     ## standardized down.
-    output = standardizationData[measuredElement != productionElement, list(
+    output = standardizationData[, list(
         Value = sum(Value/extractionRate*share, na.rm = TRUE)),
         by = c("timePointYearsSP", "geographicAreaFS",
                "measuredElement", "parentID")]
@@ -83,11 +83,10 @@ standardizeTree = function(data, tree, elements){
     forwardEdges[, share := 1]
     outputForward = merge(output, forwardEdges,
                           by = c("parentID", "timePointYearsSP", "geographicAreaFS"))
-    update = outputForward[measuredElement != productionElement,
-                           list(Value = sum(Value*extractionRate*share, na.rm = TRUE)),
+    update = outputForward[, list(Value = sum(Value*extractionRate*share, na.rm = TRUE)),
                            by = c("timePointYearsSP", "geographicAreaFS",
                                   "measuredElement", "childID")]
-    outputForwardProd = outputForward[measuredElement == productionElement, ]
+    outputForwardProd = outputForward
     outputForwardProd[, childID := parentID]
     outputForwardProd = outputForwardProd[, list(timePointYearsSP,
                                                  geographicAreaFS,

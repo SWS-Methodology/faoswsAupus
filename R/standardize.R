@@ -138,6 +138,11 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     specificTree = specificTree[!(parentID %in% c(237, 244, 252, 258, 261,
                                                   266, 268, 271, 290, 293,
                                                   313, 331, 334)), ]
+    warning("HACK! Also the 'Oils other' can be improved by not rolling up ",
+            "anything into these oil trees.")
+    specificTree = specificTree[!(parentID %in% c(263, 265, 275, 277, 280,
+                                                  296, 299, 305, 310, 312,
+                                                  333, 336, 339)), ]
     calorieTree = copy(specificTree)
     warning("HACK!  Assigning any nodes with target == 'T' to not standardize")
     specificTree[target == "T", extractionRate := Inf]
@@ -145,7 +150,9 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     ## Standardize elements except production
     suaOutput = standardizeTree(data = aupusData$nodes, tree = specificTree,
                                 elements = fbsElements[fbsElements != productionElement])
-    aupusData$nodes[, c(groupKey)
+    lapply(groupKey, function(columnName){
+        aupusData$nodes[, c(columnName) := as.character(get(columnName))]
+    })
     ## Add in production element
     suaOutput = merge(
         aupusData$nodes[, c(groupKey, paste0("Value_measuredElementFS_",
@@ -178,8 +185,11 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     fbsTree[, extractionRate := 1]
     fbsOutput = lapply(c("fbsID4", "fbsID3", "fbsID2", "fbsID1"), function(name){
         setnames(fbsTree, old = name, new = "parentID")
-        out = standardizeTree(data = suaOutput, tree = fbsTree,
+        out = standardizeTree(data = copy(suaOutput), tree = fbsTree,
                               elements = c(fbsElements, calorieElements))
+        ##' Standardization keeps elements that aren't aggregated, but for FBS
+        ##' reporting we want to remove such elements:
+        out = out[out$measuredItemFS %in% fbsTree[, parentID], ]
         setnames(fbsTree, old = "parentID", new = name)
         return(out)
     })
