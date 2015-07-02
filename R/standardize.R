@@ -145,10 +145,13 @@ standardize = function(aupusData, fbsElements = c(51, 61, 91, 101, 111, 121,
     ## Standardize elements except production
     suaOutput = standardizeTree(data = aupusData$nodes, tree = specificTree,
                                 elements = fbsElements[fbsElements != productionElement])
+    aupusData$nodes[, c(groupKey)
     ## Add in production element
-    suaOutput = merge(aupusData$nodes[, c(groupKey, productionElement),
-                                        with = FALSE], suaOutput,
-                        by = groupKey)
+    suaOutput = merge(
+        aupusData$nodes[, c(groupKey, paste0("Value_measuredElementFS_",
+                                             productionElement)),
+                        with = FALSE], suaOutput,
+        by = groupKey)
     ## Standardize other elements (calories, etc.)
     calorieTree[, extractionRate := calorieExtractionRate]
     ## Standardization is skipped by cases where target == "T", but by-products

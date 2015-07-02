@@ -45,9 +45,13 @@ standardizeTree = function(data, tree, elements){
                                                   measuredElement)]
     
     ## Merge the tree with the node data
-    tree[, parentID := as.numeric(parentID)]
+    tree[, c("parentID", "childID", "timePointYearsSP", "geographicAreaFS") :=
+             list(as.character(parentID), as.character(childID),
+                  as.character(timePointYearsSP), as.character(geographicAreaFS))]
     setnames(standardizationData, "measuredItemFS", "childID")
-    standardizationData[, childID := as.numeric(childID)]
+    standardizationData[, c("childID", "timePointYearsSP", "geographicAreaFS") :=
+                            list(as.character(childID), as.character(timePointYearsSP),
+                                 as.character(geographicAreaFS))]
     standardizationData = merge(standardizationData, tree,
                                 by = c("timePointYearsSP", "geographicAreaFS",
                                        "childID"), all.x = TRUE,
