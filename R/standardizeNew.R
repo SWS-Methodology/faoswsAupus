@@ -4,9 +4,9 @@
 ##' implemented by Marteen Van't Reet in "Flexible Aggregation of FAO's Supply 
 ##' Utilization Accounts."
 ##' 
-##' Below are some comments of interest about standardization.  These decisions 
-##' may seem arbitrary, but they were made to cause agreement between the 
-##' numbers produced from the R standardization and the existing FAOSTAT 
+##' Below are some comments of interest about standardization.  These decisions
+##' may seem arbitrary, but they were made to cause agreement between the
+##' numbers produced from the R standardization and the existing FAOSTAT
 ##' numbers.
 ##' 
 ##' \itemize{
@@ -26,45 +26,11 @@
 ##' reports production for all elements.  However, only elements of interest 
 ##' will be included in the FAO roll-ups, and so this approach should be valid.
 ##' 
-##' \item Autocuts: Some children do not get standardized to their parents (such
-##' as beer products).  These commodities should be specified in an autocuts 
-##' file, but examination of this file and the data showed that it was missing 
-##' many autocuts.  Thus, instead we force an autocut whenever a commodity is 
-##' listed as an FBS aggregate.  For example, Oil of sunflower seed (268) is a 
-##' child of sunflower seed (267) and is not specified in the autocuts file. 
-##' Thus, we would assume that oil of sunflower seed should be standardized to 
-##' sunflower seed.  However, this leads to wrong numbers, particularly as oil 
-##' of sunflower seed should be included in the oil aggregation (contained under
-##' FBS commodity code 2573).  Thus, any commodity code appearing as a component
-##' of the FBS commodity code was forced to be autocut.
-##' 
-##' \item Some edges of annex 6 (the default extraction rates used to construct 
-##' the trees, provided by Marteen van't Reet) go from a commodity to it's 
-##' grandchild. The problem with such a conversion is that if country specific 
-##' extraction rates become available, we miss the new information. For example,
-##' suppose we have a 75% extraction rate from wheat to flour and 75% from flour
-##' to bread. We could then write a default conversion rate of bread to wheat of
-##' 1/(.75*.75) = 1.7778.  But, we may obtain country specific information that 
-##' states the extraction from wheat to flour is 50%, and thus the conversion 
-##' from bread to wheat should be much different.  But, the default conversion 
-##' won't be updated to reflect this unless we change the two-level conversion 
-##' into the individual one level conversions.  This was done manually, but in 
-##' such a way that the product of the parent-child and child-grandchild 
-##' extraction rates will give the same parent-grandchild extraction rate as 
-##' originally provided.
-##' 
-##' \item 900 (Dry Whey) is a child of 903 (Whey, Fresh) and vice-versa.  One 
-##' must be removed, so we'll remove the edge from 900 to 903 (to agree with 
-##' documented commodity trees).
-##' 
-##' \item Weights of zero in the commodity tree were implemented via infinite 
-##' extraction rates.
-##' 
 ##' \item Country specific extraction rates can overwrite the default extraction
 ##' rates, and the default standardization shares are used only when no 
-##' production exists for any of the parents.  If production does exist, then 
-##' the standardization shares are proportioned according to the proportions of 
-##' production of the parent.
+##' availability exists for any of the parents.  Note that if no parents have 
+##' any availability, and if exports exceed imports, we will have negative 
+##' utilization.
 ##' 
 ##' }
 ##' 
