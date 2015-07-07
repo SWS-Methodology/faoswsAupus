@@ -123,6 +123,7 @@ getStandardizationTree = function(aupusER, defaultOnly = FALSE){
     newTree = data.table(newTree)
 
     ## HACK!  Some of the extraction rates being used are wrong.
+    warning("HACK!  Manually adjusting extraction rates!!!")
     ## See page 88 of annexes-part-II.pdf
     newTree[parent == "0512" & child == "0514", extractionRate := 0.1]
     ## See page 98 of annexes-part-II.pdf
@@ -131,6 +132,8 @@ getStandardizationTree = function(aupusER, defaultOnly = FALSE){
     newTree[parent == "0882" & child == "0917", extractionRate := 1/35.091]
     ## See page 111 of annexes-part-II.pdf
     newTree[parent == "0312" & child == "0311", extractionRate := 0.5]
+    ## Undocumented (but cyclical):
+    newTree = newTree[!(child == "0328"), ]
 
     if(!defaultOnly){
         newTree[!is.na(Value_extraction), extractionRate := Value_extraction / 10000]
