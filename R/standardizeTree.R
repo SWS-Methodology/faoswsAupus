@@ -19,49 +19,54 @@
 ##'   in the tree.
 ##'   
 
-standardizeTree = function(data, tree, elements){
+standardizeTree = function(data, tree, elements, geoVar = "geographicAreaFS",
+                           yearVar = "timePointYearsSP",
+                           itemVar = "measuredItemFS",
+                           elementPrefix = "Value_measuredElementFS_",
+                           childVar = "childID", parentVar = "parentID",
+                           extractVar = "extractionRate", shareVar = "share"){
 
     ## Data Quality Checks
     stopifnot(is(data, "data.table"))
     stopifnot(is(tree, "data.table"))
     stopifnot(is(elements, "numeric"))
-    stopifnot(c("geographicAreaFS", "timePointYearsSP", "measuredItemFS",
-              paste0("Value_measuredElementFS_", elements)) %in%
+    stopifnot(c(geoVar, yearVar, itemVar,
+              paste0(elementPrefix, elements)) %in%
                   colnames(data))
-    stopifnot(c("timePointYearsSP", "geographicAreaFS", "childID",
-                "parentID", "extractionRate", "share") %in% colnames(tree))
+    stopifnot(c(geoVar, timeVar, childVar, parentVar, extractVar, shareVar)
+              %in% colnames(tree))
     if(!"target" %in% colnames(tree)){
         tree[, target := "B"]
     }
     
-    elements = paste0("Value_measuredElementFS_", elements)
+    elements = paste0(elementPrefix, elements)
     
     ## Restructure the data for easier standardization
     standardizationData = data.table:::melt.data.table(
         data = data, measure.vars = elements,
-        id.vars = c("geographicAreaFS", "timePointYearsSP", "measuredItemFS"),
+        id.vars = c(areaVar, yearVar, itemVar),
         variable.name = "measuredElement", value.name = "Value")
-    standardizationData[, measuredElement := gsub("Value_measuredElementFS_", "",
-                                                  measuredElement)]
+    standardizationData[, measuredElement :=
+                            gsub(elementPrefix, "", measuredElement)]
     
     ## Merge the tree with the node data
-    tree[, c("parentID", "childID", "timePointYearsSP", "geographicAreaFS") :=
-             list(as.character(parentID), as.character(childID),
-                  as.character(timePointYearsSP), as.character(geographicAreaFS))]
-    setnames(standardizationData, "measuredItemFS", "childID")
-    standardizationData[, c("childID", "timePointYearsSP", "geographicAreaFS") :=
-                            list(as.character(childID), as.character(timePointYearsSP),
-                                 as.character(geographicAreaFS))]
+    tree[, c(parentVar, childVar, yearVar, areaVar) :=
+             list(as.character(get(parentVar)), as.character(get(childVar)),
+                  as.character(get(yearVar)), as.character(get(areaVar)))]
+    setnames(standardizationData, itemVar, childVar)
+    standardizationData[, c(childVar, yearVar, areaVar) :=
+                            list(as.character(get(childVar)),
+                                 as.character(get(yearVar)),
+                                 as.character(get(areaVar)))]
     standardizationData = merge(standardizationData, tree,
-                                by = c("timePointYearsSP", "geographicAreaFS",
-                                       "childID"), all.x = TRUE,
-                                allow.cartesian = TRUE)
+                                by = c(yearVar, areaVar, childVar),
+                                all.x = TRUE, allow.cartesian = TRUE)
     
     ##' If an element is not a child in the tree, then "standardize" it to
     ##' itself with a rate of 1 and a share of 1.
-    standardizationData[is.na(parentID),
-                        c("parentID", "extractionRate", "share") :=
-                            list(childID, 1, 1)]
+    standardizationData[is.na(get(parentVar)),
+                        c(parentVar, extractVar, shareVar) :=
+                            list(get(childVar), 1, 1)]
     ## Standardizing backwards is easy: we just take the value, divide by the 
     ## extraction rate, and multiply by the shares.  However, we don't 
     ## standardize the production element (because production of flour is 
@@ -69,9 +74,9 @@ standardizeTree = function(data, tree, elements){
     ## backwards, and then edges marked as forwards (i.e. target == "F") get
     ## standardized down.
     output = standardizationData[, list(
-        Value = sum(Value/extractionRate*share, na.rm = TRUE)),
-        by = c("timePointYearsSP", "geographicAreaFS",
-               "measuredElement", "parentID")]
+        Value = sum(Value/get(extractVar)*get(shareVar), na.rm = TRUE)),
+        by = c(timeVar, areaVar,
+               "measuredElement", parentVar)]
     
     forwardEdges = tree[target == "F", ]
     ## Hacking sugar tree!
@@ -82,30 +87,30 @@ standardizeTree = function(data, tree, elements){
     forwardEdges = forwardEdges[childID == 162, ]
     forwardEdges[, share := 1]
     outputForward = merge(output, forwardEdges,
-                          by = c("parentID", "timePointYearsSP", "geographicAreaFS"))
-    update = outputForward[, list(Value = sum(Value*extractionRate*share, na.rm = TRUE)),
-                           by = c("timePointYearsSP", "geographicAreaFS",
-                                  "measuredElement", "childID")]
+                          by = c(parentVar, timeVar, areaVar))
+    update = outputForward[, list(Value = sum(Value*get(extractVar)*get(shareVar), na.rm = TRUE)),
+                           by = c(timeVar, areaVar,
+                                  "measuredElement", childVar)]
     outputForwardProd = outputForward
     outputForwardProd[, childID := parentID]
-    outputForwardProd = outputForwardProd[, list(timePointYearsSP,
-                                                 geographicAreaFS,
+    outputForwardProd = outputForwardProd[, list(get(yearVar),
+                                                 get(areaVar),
                                                  measuredElement,
-                                                 childID, Value)]
+                                                 get(childVar), Value)]
     outputForwardProd = unique(outputForwardProd)
     update = rbindlist(list(update, outputForwardProd))
-    setnames(update, "childID", "parentID")
+    setnames(update, childVar, parentVar)
     ## Remove the old rows that got corrected in the update
     output = output[!output$parentID %in% forwardEdges$parentID, ]
     ## Bind back in the corrected rows
     output = rbind(output, update)
     
     ## Reshape to put back into the same shape as the passed data
-    setnames(output, "parentID", "measuredItemFS")
-    output[, measuredElement := paste0("Value_measuredElementFS_",
+    setnames(output, parentVar, itemVar)
+    output[, measuredElement := paste0(elementPrefix,
                                        measuredElement)]
-    output = dcast.data.table(data = output,
-        formula = timePointYearsSP + geographicAreaFS + measuredItemFS ~ measuredElement,
-        value.var = "Value", fun.aggregate = mean, na.rm = TRUE)
+    form = as.formula(paste(yearVar, "+", areaVar, "+", itemVar, "~ measuredElement"))
+    output = dcast.data.table(data = output, formula = form, value.var = "Value",
+                              fun.aggregate = mean, na.rm = TRUE)
     return(output)
 }
