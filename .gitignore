@@ -1,3 +1,4 @@
 *.zip
 vignettes/*.[a-zA-QS-Z]*
 vignettes/figure
+documentation/fortran
