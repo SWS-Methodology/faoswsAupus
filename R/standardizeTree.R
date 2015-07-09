@@ -29,12 +29,15 @@ standardizeTree = function(data, tree, elements, geoVar = "geographicAreaFS",
     ## Data Quality Checks
     stopifnot(is(data, "data.table"))
     stopifnot(is(tree, "data.table"))
-    stopifnot(is(elements, "numeric"))
     stopifnot(c(geoVar, yearVar, itemVar,
               paste0(elementPrefix, elements)) %in%
                   colnames(data))
-    stopifnot(c(geoVar, timeVar, childVar, parentVar, extractVar, shareVar)
+    stopifnot(c(geoVar, yearVar, childVar, parentVar, extractVar, shareVar)
               %in% colnames(tree))
+    if(!all(sapply(data[, paste0(elementPrefix, c(elements)), with = FALSE],
+                  is.numeric))){
+        stop("Some of the elements passed are not numeric!")
+    }
     if(!"target" %in% colnames(tree)){
         tree[, target := "B"]
     }
@@ -44,22 +47,22 @@ standardizeTree = function(data, tree, elements, geoVar = "geographicAreaFS",
     ## Restructure the data for easier standardization
     standardizationData = data.table:::melt.data.table(
         data = data, measure.vars = elements,
-        id.vars = c(areaVar, yearVar, itemVar),
+        id.vars = c(geoVar, yearVar, itemVar),
         variable.name = "measuredElement", value.name = "Value")
     standardizationData[, measuredElement :=
                             gsub(elementPrefix, "", measuredElement)]
     
     ## Merge the tree with the node data
-    tree[, c(parentVar, childVar, yearVar, areaVar) :=
+    tree[, c(parentVar, childVar, yearVar, geoVar) :=
              list(as.character(get(parentVar)), as.character(get(childVar)),
-                  as.character(get(yearVar)), as.character(get(areaVar)))]
+                  as.character(get(yearVar)), as.character(get(geoVar)))]
     setnames(standardizationData, itemVar, childVar)
-    standardizationData[, c(childVar, yearVar, areaVar) :=
+    standardizationData[, c(childVar, yearVar, geoVar) :=
                             list(as.character(get(childVar)),
                                  as.character(get(yearVar)),
-                                 as.character(get(areaVar)))]
+                                 as.character(get(geoVar)))]
     standardizationData = merge(standardizationData, tree,
-                                by = c(yearVar, areaVar, childVar),
+                                by = c(yearVar, geoVar, childVar),
                                 all.x = TRUE, allow.cartesian = TRUE)
     
     ##' If an element is not a child in the tree, then "standardize" it to
@@ -75,7 +78,7 @@ standardizeTree = function(data, tree, elements, geoVar = "geographicAreaFS",
     ## standardized down.
     output = standardizationData[, list(
         Value = sum(Value/get(extractVar)*get(shareVar), na.rm = TRUE)),
-        by = c(timeVar, areaVar,
+        by = c(yearVar, geoVar,
                "measuredElement", parentVar)]
     
     forwardEdges = tree[target == "F", ]
@@ -87,14 +90,14 @@ standardizeTree = function(data, tree, elements, geoVar = "geographicAreaFS",
     forwardEdges = forwardEdges[childID == 162, ]
     forwardEdges[, share := 1]
     outputForward = merge(output, forwardEdges,
-                          by = c(parentVar, timeVar, areaVar))
+                          by = c(parentVar, yearVar, geoVar))
     update = outputForward[, list(Value = sum(Value*get(extractVar)*get(shareVar), na.rm = TRUE)),
-                           by = c(timeVar, areaVar,
+                           by = c(yearVar, geoVar,
                                   "measuredElement", childVar)]
     outputForwardProd = outputForward
     outputForwardProd[, childID := parentID]
     outputForwardProd = outputForwardProd[, list(get(yearVar),
-                                                 get(areaVar),
+                                                 get(geoVar),
                                                  measuredElement,
                                                  get(childVar), Value)]
     outputForwardProd = unique(outputForwardProd)
@@ -109,7 +112,7 @@ standardizeTree = function(data, tree, elements, geoVar = "geographicAreaFS",
     setnames(output, parentVar, itemVar)
     output[, measuredElement := paste0(elementPrefix,
                                        measuredElement)]
-    form = as.formula(paste(yearVar, "+", areaVar, "+", itemVar, "~ measuredElement"))
+    form = as.formula(paste(yearVar, "+", geoVar, "+", itemVar, "~ measuredElement"))
     output = dcast.data.table(data = output, formula = form, value.var = "Value",
                               fun.aggregate = mean, na.rm = TRUE)
     return(output)
