@@ -4,28 +4,42 @@
 ##' data according to the tree.
 ##' 
 ##' @param data A data.table object containing the data of interest.
+##' @param tree The commodity tree, specified as a data.table object.  The 
+##'   columns should be childID (the commodity code of the child), parentID (the
+##'   commodity code of the parent), extractionRate (numeric value specifying 
+##'   the extraction rate), and share (numeric value specifying how the 
+##'   commodity should be split up).  There are also two optional columns: 
+##'   target (either "T", "B" or "F" indicating if that commodity is a target 
+##'   commodity, should be backward standardized, or should be forward 
+##'   standardized) and standDev (containing the standard deviation estimates 
+##'   which should be aggregated as well).  If the target is missing, everything
+##'   is assumed to be backward standardized.  If no standDev is provided, a 
+##'   deviation of 0 is assumed.  The actual names of the columns are specified
+##'   in standParams.
 ##' @param elements The element codes for nodes that should be standardized. 
 ##'   These correspond to the different "elements" of the FBS, such as 
 ##'   production, imports, exports, etc.
-##' @param tree The commodity tree, specified as a data.table object.  The 
-##'   columns should be childID (the commodity code of the child), parentID (the
-##'   commodity code of the parent), target (either "T", "B" or "F" indicating 
-##'   if that commodity is a target commodity, should be backward standardized, 
-##'   or should be forward standardized), extractionRate (numeric value 
-##'   specifying the extraction rate), and share (numeric value specifying how 
-##'   the commodity should be split up).
+##' @param standParams The parameters for standardization.  These parameters
+##'   provide information about the columns of data and tree, specifying (for
+##'   example) which columns should be standardized, which columns represent
+##'   parents/children, etc.
 ##'   
-##' @return A data.table with the commodities standardized to the highest level
+##' @return A data.table with the commodities standardized to the highest level 
 ##'   in the tree.
 ##'   
 
-standardizeTree = function(data, tree, elements, geoVar = "geographicAreaFS",
-                           yearVar = "timePointYearsSP",
-                           itemVar = "measuredItemFS",
-                           elementPrefix = "Value_measuredElementFS_",
-                           childVar = "childID", parentVar = "parentID",
-                           extractVar = "extractionRate", shareVar = "share"){
+standardizeTree = function(data, tree, elements, standParams){
 
+    ## Assign parameters
+    geoVar = standParams$geoVar
+    yearVar = standParams$yearVar
+    itemVar = standParams$itemVar
+    elementPrefix = standParams$elementPrefix
+    childVar = standParams$childVar
+    parentVar = standParams$parentVar
+    extractVar = standParams$extractVar
+    shareVar = standParams$shareVar
+    
     ## Data Quality Checks
     stopifnot(is(data, "data.table"))
     stopifnot(is(tree, "data.table"))
@@ -41,6 +55,14 @@ standardizeTree = function(data, tree, elements, geoVar = "geographicAreaFS",
     if(!"target" %in% colnames(tree)){
         tree[, target := "B"]
     }
+    stopifnot(all(tree[, target] %in% c("B", "T", "F")))
+    if(!"standDev" %in% colnames(tree)){
+        returnStandDev = FALSE
+        tree[, standDev := 0]
+    } else {
+        returnStandDev = TRUE
+    }
+    stopifnot(all(tree[, standDev] >= 0))
     
     elements = paste0(elementPrefix, elements)
     
