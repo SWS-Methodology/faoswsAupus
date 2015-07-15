@@ -33,6 +33,7 @@ defaultStandardizationParameters = function(){
         seedCode = "5525",
         industrialCode = "",
         touristCode = "",
-        residualCode = ""
+        residualCode = "",
+        adjustVar = "adjustment"
     )
 }

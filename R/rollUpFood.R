@@ -5,7 +5,10 @@
 ##' parents.  The idea is that we have official and estimated data at the SUA 
 ##' level, and the imbalances at this level translate into an imbalance in their
 ##' parent commodities.  To capture/account for this imbalance, we roll it up 
-##' into food at the top line.
+##' into food at the top line.  Note that the original estimates for food will
+##' be stored in this table under a new element code: the current food element
+##' code pasted with "_orig".  These original values need to be saved somewhere,
+##' and this seemed like a reasonable place.
 ##' 
 ##' @param data The data.table containing the full dataset for standardization.
 ##' @param tree The commodity tree which provides the edge structure.
@@ -14,8 +17,8 @@
 ##'   example) which columns should be standardized, which columns represent 
 ##'   parents/children, etc.
 ##'   
-##' @return The same data.table as was passed ("data") but with updated food
-##'   distributions to account for standardized production of children
+##' @return The same data.table as was passed ("data") but with updated food 
+##'   distributions to account for standardized production of children 
 ##'   commodities.
 ##'   
 
@@ -28,6 +31,11 @@ rollUpFood = function(data, tree, standParams){
     ## In this function, we'll want to do merging/aggregating but not group by
     ## the item variable.
     localMergeKey = c(standParams$mergeKey[standParams$mergeKey != standParams$itemVar])
+    
+    ## Save the original estimates for food
+    toBind = data[element == standParams$foodCode, ]
+    toBind[, element := paste0(element, "_orig")]
+    data = rbind(data, toBind)
     
     processingLevel = getCommodityLevel(commodityTree = tree,
                                         parentColname = standParams$parentVar,
