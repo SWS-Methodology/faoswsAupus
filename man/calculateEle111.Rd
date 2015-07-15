@@ -37,7 +37,7 @@ used for seeding.  The rules are as follows:
     producing factor) in the next year; if this is unavailable then element
     31 (actual producing factor) in the next year is used; then element 21
     in the current year; and lastly element 31 in the current year.  The
-    value for element 111 is then filled in as this computed seed value
+    value for element 111 is then filled in as this computed area value
     times R_171 divided by 1000.
 }
 }

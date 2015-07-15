@@ -4,12 +4,16 @@
 \alias{buildNodes}
 \title{Build Nodes}
 \usage{
-buildNodes(dataList)
+buildNodes(dataList, aupusParam)
 }
 \arguments{
 \item{dataList}{A list of AUPUS datasets to be analyzed, typically as
 produced by the function getAupusDataset.  For more details on this
 argument, please see ?getAupusDataset.}
+
+\item{aupusParam}{A list of running parameters to be used in pulling the data.
+Typically, this is generated from getAupusParameter (see that function for
+a description of the required elements).}
 }
 \value{
 A data.table with the node data.  Essentially, this is a data.table

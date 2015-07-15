@@ -10,7 +10,7 @@
 ##'   used in all other cases?  The old methodology isn't clear about what is 
 ##'   used.
 ##'   
-##' @result A data.table object containing 4 columns: child, parent, 
+##' @return A data.table object containing 4 columns: child, parent, 
 ##'   extractionRate, and caloriesOnly.  The child and parent columns contain 
 ##'   character values of the items, extractionRate contains the extraction 
 ##'   rates, and caloriesOnly is a logical indicating if the edge of interest 

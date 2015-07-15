@@ -25,7 +25,7 @@
 ##'   delta value implies that balancing the food increased it (over the
 ##'   original food value).
 ##'   
-##' @return
+##' @return A data.table
 ##' 
 
 rollDownFoodDelta = function(data, tree, standParams, shares, delta){

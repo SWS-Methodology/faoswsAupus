@@ -6,7 +6,7 @@
 \usage{
 standardizeNode(graph, workingNode, standardizeElement,
   productionElement = paste0(aupusParam$keyNames$valuePrefix,
-  aupusParam$keyNames$elementName, "_51"), standardizeProduction = FALSE)
+  aupusParam$keyNames$elementName, "_51"))
 }
 \arguments{
 \item{graph}{The graph object created by the function constructGraph.}
@@ -17,14 +17,7 @@ standardizeNode(graph, workingNode, standardizeElement,
 standardized.}
 
 \item{productionElement}{The column name of the production element in the
-nodes of the graph.  Important if standardizeProduction = FALSE.}
-
-\item{standardizeProduction}{Logical.  Production values are not
-  standardized up the AUPUS commodity tree as they are already accounted for
-  in the AUPUS processing (i.e. the input from processing procedure).
-  However, production will need to roll up when aggregating to higher level
-  groupings (e.g. oranges and mandarins from the oranges tree and mandarins
-  tree).}
+  nodes of the graph.  Important if standardizeProduction = FALSE.}
 }
 \value{
 A graph object that has been updated according to the description

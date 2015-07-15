@@ -17,7 +17,7 @@
 ##'   used in all other cases?  The old methodology isn't clear about what is 
 ##'   used.
 ##'   
-##' @result The aupusNetwork, updated with the new edges and nodes.
+##' @return The aupusNetwork, updated with the new edges and nodes.
 ##'   
 
 treeToStandardization = function(aupusNetwork, aupusER, defaultOnly = FALSE){
