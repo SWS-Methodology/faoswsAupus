@@ -28,12 +28,13 @@ defaultStandardizationParameters = function(){
         exportCode = "5900",
         stockCode = "71",
         foodCode = "5141",
+        foodProcCode = "f???",
         feedCode = "5520",
         wasteCode = "5120",
         seedCode = "5525",
-        industrialCode = "",
-        touristCode = "",
-        residualCode = "",
+        industrialCode = "i???",
+        touristCode = "t???",
+        residualCode = "r???",
         adjustVar = "adjustment"
     )
 }

@@ -22,6 +22,12 @@
 ##'   commodities.
 ##'   
 
+## Updates:
+## 
+## - At some point, we may want to adjust the "most stringent requirement" in
+## the case of by-products.  Currently, it just looks at the largest mean value
+## rather than incorporating standard deviation.
+
 rollUpFood = function(data, tree, standParams){
     
     tree = tree[, c(standParams$childVar, standParams$parentVar,
@@ -32,10 +38,10 @@ rollUpFood = function(data, tree, standParams){
     ## the item variable.
     localMergeKey = c(standParams$mergeKey[standParams$mergeKey != standParams$itemVar])
     
-    ## Save the original estimates for food
-    toBind = data[element == standParams$foodCode, ]
-    toBind[, element := paste0(element, "_orig")]
-    data = rbind(data, toBind)
+#     ## Save the original estimates for food
+#     toBind = data[element == standParams$foodCode, ]
+#     toBind[, element := paste0(element, "_orig")]
+#     data = rbind(data, toBind)
     
     processingLevel = getCommodityLevel(commodityTree = tree,
                                         parentColname = standParams$parentVar,
@@ -47,19 +53,6 @@ rollUpFood = function(data, tree, standParams){
         setnames(subTree, standParams$childVar, standParams$itemVar)
         data = merge(data, subTree, by = standParams$itemVar, all.x = TRUE)
         
-        ## If parentID is NA, that means the node shouldn't be aggregated to 
-        ## anything else.  To allow this, have it roll up to itself with an 
-        ## extraction rate of 1.  Also, define the groupID to be the CPC code 
-        ## (which will certainly be unique across all "parents" of that CPC 
-        ## code, as all other groupID's are parentCPC-childCPC).
-        ## 
-        ## If there is no parent, the food value should simply be kept (in 
-        ## addition to any aggregations coming from children nodes).  This is 
-        ## the "transferFlag".
-        data[, transferFlag := is.na(parentID)]
-        data[(transferFlag),
-             c(standParams$parentVar, standParams$extractVar, standParams$groupID) :=
-                 list(get(standParams$itemVar), 1, get(standParams$itemVar))]
         data[, parentValue := Value / get(standParams$extractVar)]
         ## Standard deviation scales in the same way as the mean
         data[, parentSd := standardDeviation / get(standParams$extractVar)]
@@ -68,27 +61,26 @@ rollUpFood = function(data, tree, standParams){
         ## the tightest requirement on wheat.  This is determined by just
         ## looking at the largest value (although including s.d. may also be a
         ## good idea at some point).
-        data[(transferFlag & element == standParams$foodCode) |
-             (!transferFlag & element == standParams$productionCode),
+        data[element == standParams$productionCode,
              aggToParentFlag := ifelse(parentValue ==
                         max(parentValue, na.rm = TRUE), TRUE, FALSE),
              by = c(localMergeKey, standParams$groupID)]
-        newFood = data[(aggToParentFlag), list(Value = sum(parentValue),
-                                               standardDeviation = sqrt(sum(standardDeviation^2))),
-                       by = c(localMergeKey, standParams$parentVar)]
+        foodProc = data[(aggToParentFlag),
+                        list(Value = sum(parentValue),
+                             standardDeviation = sqrt(sum(standardDeviation^2))),
+                        by = c(localMergeKey, standParams$parentVar)]
+        foodProc[, element := standParams$foodProcCode]
 
-        data[, c("parentValue", "parentSd", "aggToParentFlag", "transferFlag",
+        data[, c("parentValue", "parentSd", "aggToParentFlag", "transferF",
                  standParams$parentVar, standParams$extractVar, standParams$groupID) := NULL]
         
         ## Put the aggregated food distributions back into the main dataset
-        setnames(newFood, standParams$parentVar, standParams$itemVar)
-        data = merge(data, newFood, by = standParams$mergeKey,
-                     suffixes = c("", ".new"), all.x = TRUE)
-        data[!is.na(Value.new) & element == standParams$foodCode,
-             c("Value", "standardDeviation") :=
+        setnames(foodProc, standParams$parentVar, standParams$itemVar)
+        data = merge(data, foodProc, by = c(standParams$mergeKey, "element"),
+                     all.x = TRUE, suffixes = c("", ".new"))
+        data[!is.na(Value.new), c("Value", "standardDeviation") :=
                  list(Value.new, standardDeviation.new)]
-        deleteColumns = colnames(data)[grepl(".new", colnames(data))]
-        data[, deleteColumns := NULL, with = FALSE]
+        data[, c("Value.new", "standardDeviation.new") := NULL]
     }
     
     return(data)
