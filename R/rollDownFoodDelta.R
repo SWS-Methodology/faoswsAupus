@@ -102,10 +102,11 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
         ## Step 3: Allocate the difference to the production of the children.
         dataToUpdate[, adjustment.child := NA_real_]
         dataToUpdate[adjustment < 0, adjustment.child :=
-                         balancing(param1 = c(rep(0, .N), -adjustment[1]),
+                         balancing(param1 = c(rep(0, .N), adjustment[1]),
                                    param2 = c(standardDeviation.child, 0),
                                    sign = rep(1, .N+1),
-                                   lbounds = c(-Value, -adjustment[1]))[1:.N]*
+                                   lbounds = c(-Value, adjustment[1]),
+                                   optimize = "constrOptim")[1:.N]*
                          extractionRate,
                      by = c(localMergeKey, standParams$parentID)]
         ## This isn't the best approach.  It just reassigns adjustments based on
@@ -240,10 +241,11 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
         ## (positive adjustments will also be proportioned using the balancing
         ## method instead of the shares method above).
         dataToUpdate[, adjustment.child :=
-                         balancing(param1 = c(rep(0, .N), -adjustment[1]),
+                         balancing(param1 = c(rep(0, .N), adjustment[1]),
                                    param2 = c(standardDeviation.child, 0),
                                    sign = rep(1, .N+1),
-                                   lbounds = c(-Value, -adjustment[1]))[1:.N],
+                                   lbounds = c(-Value, adjustment[1]),
+                                   optimize = "constrOptim")[1:.N],
                      by = c(standParams$mergeKey)]
 
         ## No by-products (all within commodity allocation) so there's no step

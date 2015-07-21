@@ -19,13 +19,16 @@
 finalStandardizationToPrimary = function(data, tree, standParams){
     keyCols = standParams$mergeKey[standParams$mergeKey != standParams$itemVar]
     standTree = collapseEdges(edges = tree, keyCols = keyCols)
-    importVals = standardizeTree(data = toPrint[element == params$importCode, ],
+    importVals = standardizeTree(data = data[element == params$importCode, ],
                                  tree = standTree, standParams = params,
                                  elements = "Value")
-    exportVals = standardizeTree(data = toPrint[element == params$exportCode, ],
+    exportVals = standardizeTree(data = data[element == params$exportCode, ],
                                  tree = standTree, standParams = params,
                                  elements = "Value")
-    foodVals = standardizeTree(data = toPrint[element == params$foodCode, ],
+    foodVals = standardizeTree(data = data[element == params$foodCode, ],
+                               tree = standTree, standParams = params,
+                               elements = "Value")
+    feedVals = standardizeTree(data = data[element == params$feedCode, ],
                                tree = standTree, standParams = params,
                                elements = "Value")
 #     castFormula = paste(paste(standParams$mergeKey, collapse = "+"), "~ element")
@@ -65,9 +68,15 @@ finalStandardizationToPrimary = function(data, tree, standParams){
     foodVals[, element := standParams$foodCode]
     output = merge(output, foodVals, by = c(standParams$mergeKey, "element"),
                    all.x = TRUE, suffixes = c("", ".new"))
-    ## Don't count "food" of primary as that's just processed.
-    output[, Value := ifelse(is.na(Value.new), Value, Value.new - Value)]
+    output[, Value := ifelse(is.na(Value.new), Value, Value.new)]
     output[, Value.new := NULL]
 
+    ## Feed
+    feedVals[, element := standParams$feedCode]
+    output = merge(output, feedVals, by = c(standParams$mergeKey, "element"),
+                   all.x = TRUE, suffixes = c("", ".new"))
+    output[, Value := ifelse(is.na(Value.new), Value, Value.new)]
+    output[, Value.new := NULL]
+    
     return(output)
 }

@@ -71,7 +71,7 @@ rollUpFood = function(data, tree, standParams){
                         by = c(localMergeKey, standParams$parentVar)]
         foodProc[, element := standParams$foodProcCode]
 
-        data[, c("parentValue", "parentSd", "aggToParentFlag", "transferF",
+        data[, c("parentValue", "parentSd", "aggToParentFlag", 
                  standParams$parentVar, standParams$extractVar, standParams$groupID) := NULL]
         
         ## Put the aggregated food distributions back into the main dataset
