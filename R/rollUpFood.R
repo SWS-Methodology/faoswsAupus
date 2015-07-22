@@ -43,37 +43,81 @@ rollUpFood = function(data, tree, standParams){
 #     toBind[, element := paste0(element, "_orig")]
 #     data = rbind(data, toBind)
     
+    ## Helper function to convert NA's to 0 in the summation below
+    na2zero = function(x){
+        if(length(x) == 0) # No data for variable, return 0
+            return(0)
+        if(is.na(x))
+            return(0) # Missing, return 0
+        if(length(x) > 1)
+            stop("Length of x should be 1 or 0")
+        return(x)
+    }
+    
     processingLevel = getCommodityLevel(commodityTree = tree,
                                         parentColname = standParams$parentVar,
                                         childColname = standParams$childVar)
     range = processingLevel[, max(level):min(level)]
     for(i in range){
+        ## Determine availability for each commodity so that children with
+        ## multiple parents can be allocated up appropriately.
+        availability = data[, list(availability = 
+            na2zero(.SD[element == standParams$exportCode, Value]) -
+            na2zero(.SD[element == standParams$importCode, Value]) +
+            na2zero(.SD[element == standParams$stockCode, Value]) +
+            na2zero(.SD[element == standParams$foodCode, Value]) +
+            na2zero(.SD[element == standParams$foodProcCode, Value]) +
+            na2zero(.SD[element == standParams$feedCode, Value]) +
+            na2zero(.SD[element == standParams$wasteCode, Value]) +
+            na2zero(.SD[element == standParams$seedCode, Value]) +
+            na2zero(.SD[element == standParams$industrialCode, Value]) +
+            na2zero(.SD[element == standParams$touristCode, Value]) +
+            na2zero(.SD[element == standParams$residualCode, Value])),
+        by = c(standParams$mergeKey)]
+        availability[availability < 0, availability := 0]
+        
         mergeFilter = data.table(childID = processingLevel[level == i, node])
         subTree = merge(tree, mergeFilter, by = standParams$childVar)
         setnames(subTree, standParams$childVar, standParams$itemVar)
-        data = merge(data, subTree, by = standParams$itemVar, all.x = TRUE)
+        ## Create foodProc to hold the food required for processing data.  This
+        ## will eventually get merged back into data.
+        foodProc = merge(data[element == standParams$productionCode, ],
+                         subTree, by = standParams$itemVar, all.x = TRUE,
+        ## Allow cartesian because one commodity may have several parents
+                         allow.cartesian = TRUE)
+        ## Merge on availability for the parents to determine allocations
+        setnames(availability, standParams$itemVar, standParams$parentVar)
+        foodProc = merge(foodProc, availability,
+                         by = c(localMergeKey, standParams$parentVar),
+                         all.x = TRUE)
+        foodProc[is.na(availability), availability := 0]
+        foodProc[, totalParentAvailability := sum(availability),
+                 by = c(standParams$mergeKey)]
+        foodProc[, totalParents := .N, by = c(standParams$mergeKey)]
+        foodProc[, Value := ifelse(totalParentAvailability == 0,
+                                   ## If no availability, split equally among parents
+                                   Value / totalParents,
+                                   ## Otherwise, split by proportion of availability
+                                   Value * availability / totalParentAvailability)]
         
-        data[, parentValue := Value / get(standParams$extractVar)]
+        foodProc[, parentValue := Value / get(standParams$extractVar)]
         ## Standard deviation scales in the same way as the mean
-        data[, parentSd := standardDeviation / get(standParams$extractVar)]
+        foodProc[, parentSd := standardDeviation / get(standParams$extractVar)]
         ## In the case of multiple commodities per unique group ID (i.e. 
         ## flour/bran/germ as children of wheat) determine which commodity gives
         ## the tightest requirement on wheat.  This is determined by just
         ## looking at the largest value (although including s.d. may also be a
         ## good idea at some point).
-        data[element == standParams$productionCode,
-             aggToParentFlag := ifelse(parentValue ==
-                        max(parentValue, na.rm = TRUE), TRUE, FALSE),
-             by = c(localMergeKey, standParams$groupID)]
-        foodProc = data[(aggToParentFlag),
-                        list(Value = sum(parentValue),
-                             standardDeviation = sqrt(sum(standardDeviation^2))),
-                        by = c(localMergeKey, standParams$parentVar)]
+        foodProc[element == standParams$productionCode,
+                 aggToParentFlag := ifelse(parentValue ==
+                    max(parentValue, na.rm = TRUE), TRUE, FALSE),
+                 by = c(localMergeKey, standParams$groupID)]
+        foodProc = foodProc[(aggToParentFlag),
+                            list(Value = sum(parentValue),
+                                 standardDeviation = sqrt(sum(standardDeviation^2))),
+                            by = c(localMergeKey, standParams$parentVar)]
         foodProc[, element := standParams$foodProcCode]
 
-        data[, c("parentValue", "parentSd", "aggToParentFlag", 
-                 standParams$parentVar, standParams$extractVar, standParams$groupID) := NULL]
-        
         ## Put the aggregated food distributions back into the main dataset
         setnames(foodProc, standParams$parentVar, standParams$itemVar)
         data = merge(data, foodProc, by = c(standParams$mergeKey, "element"),

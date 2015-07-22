@@ -31,21 +31,43 @@ computeProcessedProduction = function(data, tree, standParams){
     
     ## Helper function to convert NA's to 0 in the summation below
     na2zero = function(x){
-        if(is.na(x))
+        if(length(x) == 0) # No data for variable, return 0
             return(0)
+        if(is.na(x))
+            return(0) # Missing, return 0
+        if(length(x) > 1)
+            stop("Length of x should be 1 or 0")
         return(x)
     }
     
     ## Compute the production at the processing level as the balance of the
     ## other elements.
     data[, newProduction :=
-             na2zero(.SD[element == 5900, Value]) +
-             na2zero(.SD[element == 5141, Value]) -
-             na2zero(.SD[element == 5600, Value]), by = c(standParams$mergeKey)]
+             na2zero(.SD[element == standParams$exportCode, Value]) -
+             na2zero(.SD[element == standParams$importCode, Value]) +
+             na2zero(.SD[element == standParams$stockCode, Value]) +
+             na2zero(.SD[element == standParams$foodCode, Value]) +
+             na2zero(.SD[element == standParams$foodProcCode, Value]) +
+             na2zero(.SD[element == standParams$feedCode, Value]) +
+             na2zero(.SD[element == standParams$wasteCode, Value]) +
+             na2zero(.SD[element == standParams$seedCode, Value]) +
+             na2zero(.SD[element == standParams$industrialCode, Value]) +
+             na2zero(.SD[element == standParams$touristCode, Value]) +
+             na2zero(.SD[element == standParams$residualCode, Value]),
+         by = c(standParams$mergeKey)]
     data[, newProductionSD := sqrt(
-             na2zero(.SD[element == 5900, standardDeviation])^2 +
-             na2zero(.SD[element == 5141, standardDeviation])^2 -
-             na2zero(.SD[element == 5600, standardDeviation])^2), by = c(standParams$mergeKey)]
+             na2zero(.SD[element == standParams$exportCode, standardDeviation])^2 +
+             na2zero(.SD[element == standParams$importCode, standardDeviation])^2 +
+             na2zero(.SD[element == standParams$stockCode, standardDeviation])^2 +
+             na2zero(.SD[element == standParams$foodCode, standardDeviation])^2 +
+             na2zero(.SD[element == standParams$foodProcCode, standardDeviation])^2 +
+             na2zero(.SD[element == standParams$feedCode, standardDeviation])^2 +
+             na2zero(.SD[element == standParams$wasteCode, standardDeviation])^2 +
+             na2zero(.SD[element == standParams$seedCode, standardDeviation])^2 +
+             na2zero(.SD[element == standParams$industrialCode, standardDeviation])^2 +
+             na2zero(.SD[element == standParams$touristCode, standardDeviation])^2 +
+             na2zero(.SD[element == standParams$residualCode, standardDeviation])^2),
+         by = c(standParams$mergeKey)]
     ## Only keep the production value IF:
     ## 
     ## - The current value is missing (we don't want to overwrite official data)
@@ -56,7 +78,7 @@ computeProcessedProduction = function(data, tree, standParams){
     ## seed/imports/...!)
     data[element == standParams$productionCode &
              (!measuredItemCPC %in% parentIDs) &
-             is.na(Value),
+             (is.na(Value) | Value == 0),
          c("Value", "standardDeviation") := list(newProduction, newProductionSD)]
     data[, c("newProduction", "newProductionSD") := NULL]
 }
