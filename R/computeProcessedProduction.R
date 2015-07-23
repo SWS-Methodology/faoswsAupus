@@ -29,17 +29,6 @@ computeProcessedProduction = function(data, tree, standParams){
                                         childColname = "childID")
     parentIDs = processingLevel[level == 0, node]
     
-    ## Helper function to convert NA's to 0 in the summation below
-    na2zero = function(x){
-        if(length(x) == 0) # No data for variable, return 0
-            return(0)
-        if(is.na(x))
-            return(0) # Missing, return 0
-        if(length(x) > 1)
-            stop("Length of x should be 1 or 0")
-        return(x)
-    }
-    
     ## Compute the production at the processing level as the balance of the
     ## other elements.
     data[, newProduction :=
@@ -55,6 +44,7 @@ computeProcessedProduction = function(data, tree, standParams){
              na2zero(.SD[element == standParams$touristCode, Value]) +
              na2zero(.SD[element == standParams$residualCode, Value]),
          by = c(standParams$mergeKey)]
+    data[, newProduction := ifelse(newProduction < 0, 0, newProduction)]
     data[, newProductionSD := sqrt(
              na2zero(.SD[element == standParams$exportCode, standardDeviation])^2 +
              na2zero(.SD[element == standParams$importCode, standardDeviation])^2 +

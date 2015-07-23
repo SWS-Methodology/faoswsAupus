@@ -57,21 +57,39 @@ rollUpFood = function(data, tree, standParams){
     processingLevel = getCommodityLevel(commodityTree = tree,
                                         parentColname = standParams$parentVar,
                                         childColname = standParams$childVar)
-    range = processingLevel[, max(level):min(level)]
+    range = processingLevel[, max(level):(min(level)+1)]
     for(i in range){
+        ## Compute required production for processed products at the level which
+        ## will be updated.  This "required production" is the production that
+        ## is required to cover deficits due to exports, food, etc.
+        toUpdate = computeProcessedProduction(
+            data = data[get(standParams$itemVar) %in%
+                            processingLevel[level == i, node], ],
+            tree = tree, standParams = standParams)
+        ## Only production will get udpated:
+        toUpdate = toUpdate[element == standParams$productionCode, ]
+        data = merge(data, toUpdate, suffixes = c("", ".new"),
+                     by = c(standParams$mergeKey, "element"),
+                     all = TRUE)
+        data[!is.na(Value.new), c("Value", "standardDeviation", "metFlag", "obsFlag") :=
+                 list(Value.new, standardDeviation.new, metFlag.new, obsFlag.new)]
+        data[, c("Value.new", "standardDeviation.new", "metFlag.new", "obsFlag.new") :=
+                 NULL]
+
         ## Determine availability for each commodity so that children with
         ## multiple parents can be allocated up appropriately.
         availability = data[, list(availability = 
-            na2zero(.SD[element == standParams$exportCode, Value]) -
-            na2zero(.SD[element == standParams$importCode, Value]) +
-            na2zero(.SD[element == standParams$stockCode, Value]) +
-            na2zero(.SD[element == standParams$foodCode, Value]) +
-            na2zero(.SD[element == standParams$foodProcCode, Value]) +
-            na2zero(.SD[element == standParams$feedCode, Value]) +
-            na2zero(.SD[element == standParams$wasteCode, Value]) +
-            na2zero(.SD[element == standParams$seedCode, Value]) +
-            na2zero(.SD[element == standParams$industrialCode, Value]) +
-            na2zero(.SD[element == standParams$touristCode, Value]) +
+            na2zero(.SD[element == standParams$productionCode, Value]) -
+            na2zero(.SD[element == standParams$exportCode, Value]) +
+            na2zero(.SD[element == standParams$importCode, Value]) -
+            na2zero(.SD[element == standParams$stockCode, Value]) -
+            na2zero(.SD[element == standParams$foodCode, Value]) -
+            na2zero(.SD[element == standParams$foodProcCode, Value]) -
+            na2zero(.SD[element == standParams$feedCode, Value]) -
+            na2zero(.SD[element == standParams$wasteCode, Value]) -
+            na2zero(.SD[element == standParams$seedCode, Value]) -
+            na2zero(.SD[element == standParams$industrialCode, Value]) -
+            na2zero(.SD[element == standParams$touristCode, Value]) -
             na2zero(.SD[element == standParams$residualCode, Value])),
         by = c(standParams$mergeKey)]
         availability[availability < 0, availability := 0]
@@ -83,7 +101,8 @@ rollUpFood = function(data, tree, standParams){
         ## will eventually get merged back into data.
         foodProc = merge(data[element == standParams$productionCode, ],
                          subTree, by = standParams$itemVar, all.x = TRUE,
-        ## Allow cartesian because one commodity may have several parents
+                         ## Allow cartesian because one commodity may have
+                         ## several parents
                          allow.cartesian = TRUE)
         ## Merge on availability for the parents to determine allocations
         setnames(availability, standParams$itemVar, standParams$parentVar)

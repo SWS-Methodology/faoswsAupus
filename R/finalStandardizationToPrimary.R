@@ -19,64 +19,19 @@
 finalStandardizationToPrimary = function(data, tree, standParams){
     keyCols = standParams$mergeKey[standParams$mergeKey != standParams$itemVar]
     standTree = collapseEdges(edges = tree, keyCols = keyCols)
-    importVals = standardizeTree(data = data[element == params$importCode, ],
-                                 tree = standTree, standParams = params,
-                                 elements = "Value")
-    exportVals = standardizeTree(data = data[element == params$exportCode, ],
-                                 tree = standTree, standParams = params,
-                                 elements = "Value")
-    foodVals = standardizeTree(data = data[element == params$foodCode, ],
-                               tree = standTree, standParams = params,
-                               elements = "Value")
-    feedVals = standardizeTree(data = data[element == params$feedCode, ],
-                               tree = standTree, standParams = params,
-                               elements = "Value")
-#     castFormula = paste(paste(standParams$mergeKey, collapse = "+"), "~ element")
-#     data[, element := ifelse(element == standParams$productionCode, "Production",
-#                       ifelse(element == standParams$importCode, "Imports",
-#                       ifelse(element == standParams$exportCode, "Exports",
-#                       ifelse(element == standParams$stockCode, "StockChange",
-#                       ifelse(element == standParams$foodCode, "Food",
-#                       ifelse(element == standParams$feedCode, "Feed",
-#                       ifelse(element == standParams$seedCode, "Seed",
-#                       ifelse(element == standParams$wasteCode, "Waste",
-#                       ifelse(element == standParams$industrialCode, "Industrial",
-#                       ifelse(element == standParams$touristCode, "Tourist",
-#                       ifelse(element == standParams$residualCode, "Residual",
-#                              "NotApplicable")))))))))))]
-#     output = dcast.data.table(data = data, formula = castFormula,
-#                               value.var = "Value", fun.aggregate = mean)
-    ## Filter data based on merge keys (don't want all SUA commodities)
-    output = merge(data, importVals[, standParams$mergeKey, with = FALSE],
-                   by = standParams$mergeKey)
+    out = data[, standardizeTree(data = .SD, tree = standTree,
+                                 standParams = standParams, elements = "Value"),
+               by = element]
     
-    ## Imports
-    importVals[, element := standParams$importCode]
-    output = merge(output, importVals, by = c(standParams$mergeKey, "element"),
-                   all.x = TRUE, suffixes = c("", ".new"))
-    output[, Value := ifelse(is.na(Value.new), Value, Value.new)]
-    output[, Value.new := NULL]
-
-    ## Exports
-    exportVals[, element := standParams$exportCode]
-    output = merge(output, exportVals, by = c(standParams$mergeKey, "element"),
-                   all.x = TRUE, suffixes = c("", ".new"))
-    output[, Value := ifelse(is.na(Value.new), Value, Value.new)]
-    output[, Value.new := NULL]
-
-    ## Food
-    foodVals[, element := standParams$foodCode]
-    output = merge(output, foodVals, by = c(standParams$mergeKey, "element"),
-                   all.x = TRUE, suffixes = c("", ".new"))
-    output[, Value := ifelse(is.na(Value.new), Value, Value.new)]
-    output[, Value.new := NULL]
-
-    ## Feed
-    feedVals[, element := standParams$feedCode]
-    output = merge(output, feedVals, by = c(standParams$mergeKey, "element"),
-                   all.x = TRUE, suffixes = c("", ".new"))
-    output[, Value := ifelse(is.na(Value.new), Value, Value.new)]
-    output[, Value.new := NULL]
+    ## Production and food for processing should never be standardized. 
+    ## Instead, take the primary value directly.
+    out = merge(out, data[, c(standParams$mergeKey, "element", "Value"),
+                          with = FALSE],
+                by = c(standParams$mergeKey, "element"),
+                suffixes = c("", ".old"))
+    out[element %in% c(standParams$productionCode, standParams$foodProcCode),
+        Value := Value.old]
+    out[, Value.old := NULL]
     
-    return(output)
+    return(out)
 }
