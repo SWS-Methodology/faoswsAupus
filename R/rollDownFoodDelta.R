@@ -154,12 +154,22 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
                                     allow.cartesian = TRUE)
             missingProducts[, mergeVar := NULL]
         }
+        
+        ## Add current production values to missingProducts
+        dataVals = data[element == params$productionCode,
+                        c(params$mergeKey, "Value"), with = FALSE]
+        setnames(dataVals, params$itemVar, params$childVar)
+        missingProducts = merge(missingProducts, dataVals,
+                                by = c(localMergeKey, params$childVar),
+                                all.x = TRUE)
+        setnames(missingProducts, "Value", "Value.child")
+        
         missingProducts[, element.child := standParams$productionCode]
-        missingProducts[, c("adjustment.child", "Value.child") := 0]
+        missingProducts[, c("adjustment.child") := 0]
         setnames(missingProducts, standParams$childVar, standParams$itemVar)
         dataToUpdate = rbindlist(list(dataToUpdate, missingProducts), fill = TRUE)
         ## Now, scale up production for by-products
-        dataToUpdate[, maxParentAllocation := max(Value.child/extractionRate),
+        dataToUpdate[, maxParentAllocation := max(Value.child/extractionRate, na.rm = TRUE),
                      by = c(localMergeKey, standParams$groupID)]
         dataToUpdate[, adjustment.child := adjustment.child +
                          maxParentAllocation * extractionRate - Value.child]
