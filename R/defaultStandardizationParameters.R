@@ -21,6 +21,7 @@ defaultStandardizationParameters = function(){
         parentVar = "parentID",
         extractVar = "extractionRate",
         shareVar = "share",
+        targetVar = "target",
         productionCode = "5510",
         yieldCode = "5421",
         areaHarvCode = "5312",
