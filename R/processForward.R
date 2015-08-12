@@ -49,36 +49,57 @@ processForward = function(data, tree, standParams){
     }
     
     for(currentLevel in subTree[, sort(unique(level))]){
-        data = merge(data, subTree[level == currentLevel, ], all.x = TRUE,
-                     by = standParams$itemVar, allow.cartesian = TRUE)
-        ## Process the node down:
-        data[!is.na(get(standParams$extractVar)), c(standParams$itemVar) :=
-                 get(standParams$childVar)]
-        data[!is.na(get(standParams$extractVar)), Value :=
-                 Value * get(standParams$extractVar)]
-        data[!is.na(get(standParams$extractVar)), standardDeviation :=
-                 standardDeviation * get(standParams$extractVar)]
+        dataToUpdate = merge(data, subTree[level == currentLevel, ],
+                             by = standParams$itemVar, allow.cartesian = TRUE)
+        ## Process the node down by first computing the availability of the
+        ## parent as the balance
+        dataToUpdate = dataToUpdate[, list(parentAvail = sum(Value *
+            ifelse(element %in% c(standParams$exportCode, standParams$stockCode,
+                                  standParams$foodCode, standParams$foodProcCode,
+                                  standParams$feedCode, standParams$wasteCode,
+                                  standParams$seedCode, standParams$industrialCode,
+                                  standParams$touristCode, standParams$residualCode), -1,
+                   ifelse(element %in% c(standParams$importCode,
+                                         standParams$productionCode), 1, 0)),
+            na.rm = TRUE),
+            parentAvailSd = sqrt(sum(standardDeviation^2 *
+                ifelse(element %in% c(standParams$exportCode, standParams$stockCode,
+                        standParams$foodCode, standParams$foodProcCode,
+                        standParams$feedCode, standParams$wasteCode,
+                        standParams$seedCode, standParams$industrialCode,
+                        standParams$touristCode, standParams$residualCode,
+                        standParams$importCode, standParams$productionCode), 1, 0),
+                na.rm = TRUE))),
+            by = c(standParams$mergeKey, standParams$childVar,
+                   standParams$extractVar)]
+        dataToUpdate[, c(standParams$itemVar) := get(standParams$childVar)]
+        dataToUpdate[, Value := get(standParams$extractVar) * parentAvail]
+        dataToUpdate[, standardDeviation := get(standParams$extractVar) * parentAvailSd]
+        dataToUpdate[, element := standParams$productionCode]
+        dataToUpdate = dataToUpdate[, c(standParams$mergeKey, "element", "Value",
+                                        "standardDeviation"), with = FALSE]
+        ## Aggregate dataToUpdate in case there are multiple parents going into
+        ## one child.
+        dataToUpdate = dataToUpdate[, list(Value = sum(Value),
+                    standardDeviation = sqrt(sum(standardDeviation^2))),
+                by = c(standParams$mergeKey, "element")]
+                
+        ## Add in the new data values
+        data = merge(data, dataToUpdate, by = c(standParams$mergeKey, "element"),
+                     all = TRUE, suffixes = c("", ".new"))
+        data[is.na(Value), c("Value", "standardDeviation") :=
+                 list(Value.new, standardDeviation.new)]
+        data[, c("Value.new", "standardDeviation.new") := NULL]
         
-        ## Don't overwrite official production, if it's available:
-        data[element == standParams$productionCode,
-             officialProduction := sum(!is.na(Value) &
-                is.na(get(standParams$extractVar))) > 0,
-             by = c(standParams$mergeKey)]
-        ## To filter out values that would overwrite official production, we
-        ## remove values that correspond to production elements, have
-        ## non-missing extraction rates and have official production.
-        data = data[!(element == standParams$productionCode &
-                          !is.na(get(standParams$extractVar)) &
-                          officialProduction), ]
-        
-        ## Should aggregate the flags too:
-        data = data[, list(Value = sum(Value),
-                           standardDeviation =
-                               sqrt(sum(standardDeviation^2)),
-                           metFlag = Mode(metFlag),
-                           obsFlag = Mode(obsFlag)),
-             by = c(standParams$mergeKey, "element")]
+        ## Remove the values processed forward from the original data
+        data = data[!get(standParams$itemVar) %in%
+                        subTree[level == currentLevel, get(standParams$itemVar)]]
     }
     tree = tree[!get(standParams$targetVar) == "F", ]
+    
+#     ## This function may create some new commodities, and only the production of
+#     ## these items will be in the data.frame.  To prevent future issues, fill in
+#     ## all other elements as well.
+
     return(list(data = data, tree = tree))
 }

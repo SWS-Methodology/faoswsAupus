@@ -133,14 +133,14 @@ rollUpFood = function(data, tree, standParams){
                  by = c(localMergeKey, standParams$groupID)]
         foodProc = foodProc[(aggToParentFlag),
                             list(Value = sum(parentValue),
-                                 standardDeviation = sqrt(sum(standardDeviation^2))),
+                                 standardDeviation = sqrt(sum(parentSd^2))),
                             by = c(localMergeKey, standParams$parentVar)]
         foodProc[, element := standParams$foodProcCode]
 
         ## Put the aggregated food distributions back into the main dataset
         setnames(foodProc, standParams$parentVar, standParams$itemVar)
         data = merge(data, foodProc, by = c(standParams$mergeKey, "element"),
-                     all.x = TRUE, suffixes = c("", ".new"))
+                     all = TRUE, suffixes = c("", ".new"))
         data[!is.na(Value.new), c("Value", "standardDeviation") :=
                  list(Value.new, standardDeviation.new)]
         data[, c("Value.new", "standardDeviation.new") := NULL]

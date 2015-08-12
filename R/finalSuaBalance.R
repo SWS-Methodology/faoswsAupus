@@ -46,7 +46,7 @@ finalSuaBalance = function(data, standParams, feedElements = c(),
         (element == p$foodCode & !get(p$itemVar) %in% feedElements) |
         (element == p$feedCode & get(p$itemVar) %in% feedElements),
             Value + imbalance, Value)]
-    if(any(data$Value < 0)){
+    if(any(data$Value < 0, na.rm = TRUE)){
         warning("Some negative balanced values are occurring!  Investigation ",
                 "needed!!!")
     }

@@ -93,6 +93,7 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
                                   with = FALSE],
                              by = c(standParams$itemVar, localMergeKey),
                              suffixes = c("", ".child"), allow.cartesian = TRUE)
+        dataToUpdate[is.na(Value.child), Value.child := 0]
         dataToUpdate[, strictestProduct := Value.child / extractionRate ==
                          max(Value.child / extractionRate),
                      by = c(localMergeKey, "groupID")]
@@ -102,15 +103,15 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
         ## Step 3: Allocate the difference to the production of the children.
         dataToUpdate[, adjustment.child := NA_real_]
         dataToUpdate[adjustment < 0, adjustment.child :=
-                         ## Must convert processed back into wheat for the balancing
-                         -balancing(param1 = c(rep(0, .N), adjustment[1])/c(extractionRate, 1),
+                         ## Must convert processed back into parent for the balancing
+                         balancing(param1 = c(rep(0, .N), adjustment[1])/c(extractionRate, 1),
                                    param2 = c(standardDeviation.child, 0)/c(extractionRate, 1),
                                    sign = rep(1, .N+1),
                                    lbounds = c(-Value.child, adjustment[1]),
                                    optimize = "constrOptim",
                                    constrTol = 1e-4)[1:.N]*
                          extractionRate,
-                     by = c(localMergeKey, standParams$parentID)]
+                     by = c(localMergeKey, standParams$parentVar)]
         ## This isn't the best approach.  It just reassigns adjustments based on
         ## the shares.  The problem is that there is likely an imbalance 
         ## already, and so adjustments should be assigned so as to move to the 
@@ -122,6 +123,16 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
                 "allocated to approach shares")
         dataToUpdate[adjustment >= 0, adjustment.child :=
                          adjustment * share * extractionRate]
+        ## Two adjustments may be applied to the same child, as would be the 
+        ## case when we have changes in multiple parents flowing to one child. 
+        ## Thus, we must aggregate at this point to get the total changes for
+        ## each child.
+        dataToUpdate =
+            dataToUpdate[, adjustment.child := sum(adjustment.child),
+                     by = c(standParams$mergeKey, "element",
+                            standParams$extractVar,
+                            "element.child", "Value.child",
+                            "standardDeviation.child")]
         
         ## Step 4: Make by-products consistent by adjusting the production of 
         ## by-products to the largest element.  For example, suppose 85 kg of 
@@ -176,8 +187,8 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
         dataToUpdate[, maxParentAllocation := NULL]
         
         ## Step 5: Merge on the new data to the production
-        dataToUpdate = dataToUpdate[, c(standParams$itemVar, "adjustment.child",
-                                      localMergeKey), with = FALSE]
+        dataToUpdate = unique(dataToUpdate[, c(standParams$itemVar,
+                        "adjustment.child", localMergeKey), with = FALSE])
         dataToUpdate[, element := standParams$productionCode]
         data = merge(data, dataToUpdate, by = c(standParams$itemVar,
                                                 localMergeKey, "element"),
