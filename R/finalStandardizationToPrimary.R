@@ -12,15 +12,17 @@
 ##'   provide information about the columns of data and tree, specifying (for 
 ##'   example) which columns should be standardized, which columns represent 
 ##'   parents/children, etc.
+##' @param sugarHack Logical.  See standardizeTree for details.
 ##'   
 ##' @return A data.table with the aggregated primary commodities.
 ##' 
 
-finalStandardizationToPrimary = function(data, tree, standParams){
+finalStandardizationToPrimary = function(data, tree, standParams, sugarHack = TRUE){
     keyCols = standParams$mergeKey[standParams$mergeKey != standParams$itemVar]
     standTree = collapseEdges(edges = tree, keyCols = keyCols)
     out = data[, standardizeTree(data = .SD, tree = standTree,
-                                 standParams = standParams, elements = "Value"),
+                                 standParams = standParams, elements = "Value",
+                                 sugarHack = sugarHack),
                by = element]
     
     ## Production and food for processing should never be standardized. 

@@ -66,6 +66,8 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
                                         parentColname = standParams$parentVar,
                                         childColname = standParams$childVar)
     range = processingLevel[, min(level):(max(level)-1)]
+    ## Start at the top of the commodity tree and iterate down (i = 0 implies
+    ## processing primary into first level processing).
     for(i in range){
         ## Only consider parents at this current processing level
         mergeFilter = data.table(parentID = processingLevel[level == i, node])
@@ -173,6 +175,7 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
         missingProducts = merge(missingProducts, dataVals,
                                 by = c(localMergeKey, params$childVar),
                                 all.x = TRUE)
+        missingProducts[is.na(Value), Value := 0]
         setnames(missingProducts, "Value", "Value.child")
         
         missingProducts[, element.child := standParams$productionCode]
