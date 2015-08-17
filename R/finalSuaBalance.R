@@ -45,10 +45,6 @@ finalSuaBalance = function(data, standParams, feedElements = c(),
     data[abs(imbalance) > 10, Value := ifelse(
         (element == p$foodCode & !get(p$itemVar) %in% feedElements) |
         (element == p$feedCode & get(p$itemVar) %in% feedElements),
-            Value + imbalance, Value)]
-    if(any(data$Value < 0, na.rm = TRUE)){
-        warning("Some negative balanced values are occurring!  Investigation ",
-                "needed!!!")
-    }
+            ifelse(is.na(Value), 0, Value) + imbalance, Value)]
     data[, imbalance := NULL]
 }

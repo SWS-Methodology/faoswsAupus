@@ -77,6 +77,15 @@ standardizeTree = function(data, tree, elements, standParams, sugarHack = TRUE){
     standardizationData[, measuredElement :=
                             gsub(elementPrefix, "", measuredElement)]
     
+    ## To ensure commodities are standardized up multiple levels, we have to
+    ## collapse the tree (otherwise if A -> B -> C in the tree, C may be
+    ## standardized only to B and not to A, as desired).
+    standKey = standParams$mergeKey[standParams$mergeKey != standParams$itemVar]
+    tree = collapseEdges(edges = tree, parentName = standParams$parentVar,
+                         childName = standParams$childVar,
+                         extractionName = standParams$extractVar,
+                         keyCols = standKey)
+    
     ## Merge the tree with the node data
     tree[, c(parentVar, childVar, yearVar, geoVar) :=
              list(as.character(get(parentVar)), as.character(get(childVar)),

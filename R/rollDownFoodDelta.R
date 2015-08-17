@@ -52,6 +52,10 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
              "will be no way to process down positive differences.")
     }
     
+    warning("If we are changing our process to not roll-up/roll-down ",
+            "distributions, this function should become much simpler.  ",
+            "It should then just ensure production of by-products match.")
+    
     ## Remove unneeded columns
     tree = tree[, c(standParams$childVar, standParams$parentVar,
                 standParams$extractVar, standParams$groupID,
@@ -107,9 +111,9 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
         dataToUpdate[adjustment < 0, adjustment.child :=
                          ## Must convert processed back into parent for the balancing
                          balancing(param1 = c(rep(0, .N), adjustment[1])/c(extractionRate, 1),
-                                   param2 = c(standardDeviation.child, 0)/c(extractionRate, 1),
+                                   param2 = c(sapply(standardDeviation.child, na2zero), 0)/c(extractionRate, 1),
                                    sign = rep(1, .N+1),
-                                   lbounds = c(-Value.child, adjustment[1]),
+                                   lbounds = c(-sapply(Value.child, na2zero), adjustment[1]),
                                    optimize = "constrOptim",
                                    constrTol = 1e-4)[1:.N]*
                          extractionRate,
@@ -268,12 +272,12 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
         ## method instead of the shares method above).
         dataToUpdate[, adjustment.child :=
                          balancing(param1 = c(rep(0, .N), adjustment[1]),
-                                   param2 = c(standardDeviation.child, 0),
+                                   param2 = c(sapply(standardDeviation.child, na2zero), 0),
                                    sign = c(ifelse(element %in% c(standParams$productionCode,
                                                                   standParams$importCode), 1, -1), 1),
                                    lbounds = c(ifelse(element %in% c(standParams$stockCode,
                                                                      standParams$touristCode),
-                                                      -Inf, -Value.child), adjustment[1]),
+                                                      -Inf, sapply(-Value.child, na2zero)), adjustment[1]),
                                    optimize = "constrOptim")[1:.N],
                      by = c(standParams$mergeKey)]
 
