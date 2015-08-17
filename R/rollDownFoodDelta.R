@@ -269,8 +269,11 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
         dataToUpdate[, adjustment.child :=
                          balancing(param1 = c(rep(0, .N), adjustment[1]),
                                    param2 = c(standardDeviation.child, 0),
-                                   sign = rep(1, .N+1),
-                                   lbounds = c(-Value, adjustment[1]),
+                                   sign = c(ifelse(element %in% c(standParams$productionCode,
+                                                                  standParams$importCode), 1, -1), 1),
+                                   lbounds = c(ifelse(element %in% c(standParams$stockCode,
+                                                                     standParams$touristCode),
+                                                      -Inf, -Value.child), adjustment[1]),
                                    optimize = "constrOptim")[1:.N],
                      by = c(standParams$mergeKey)]
 

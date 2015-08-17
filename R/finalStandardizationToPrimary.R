@@ -18,6 +18,15 @@
 ##' 
 
 finalStandardizationToPrimary = function(data, tree, standParams, sugarHack = TRUE){
+    
+    warning("We need a way of setting shares on tree based on processed ",
+            "availability.  For example, beet sugar and cane sugar may be ",
+            "processed into refined sugar.  When standardizing, we need to ",
+            "standardize refined sugar back to these parents and split by some ",
+            "shares.  The shares should **probably** be the split rates from ",
+            "processing, if available, but such an approach is not currently ",
+            "implemented.")
+    
     keyCols = standParams$mergeKey[standParams$mergeKey != standParams$itemVar]
     standTree = collapseEdges(edges = tree, keyCols = keyCols)
     out = data[, standardizeTree(data = .SD, tree = standTree,
@@ -30,7 +39,7 @@ finalStandardizationToPrimary = function(data, tree, standParams, sugarHack = TR
     out = merge(out, data[, c(standParams$mergeKey, "element", "Value"),
                           with = FALSE],
                 by = c(standParams$mergeKey, "element"),
-                suffixes = c("", ".old"))
+                suffixes = c("", ".old"), all.x = TRUE)
     out[element %in% c(standParams$productionCode, standParams$foodProcCode),
         Value := Value.old]
     out[, Value.old := NULL]
