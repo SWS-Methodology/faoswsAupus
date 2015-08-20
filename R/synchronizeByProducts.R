@@ -16,14 +16,7 @@
 ##' 
 
 synchronizeByProducts = function(data, tree, standParams, specificTree = FALSE){
-    if(!standParams$adjustVar %in% colnames(data))
-        stop("standParams$adjustVar must be a column of data, otherwise there ",
-             "is no adjustment to propogate down!")
-    if(!standParams$shareVar %in% colnames(tree)){
-        stop("standParams$shareVar must be a column of tree, otherwise there ",
-             "will be no way to process down positive differences.")
-    }
-    
+
     ## In this function, we'll want to do merging/aggregating but often not
     ## group by the item variable.
     localMergeKey = standParams$mergeKey[standParams$mergeKey != standParams$itemVar]
