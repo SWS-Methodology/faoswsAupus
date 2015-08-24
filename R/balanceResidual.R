@@ -1,4 +1,4 @@
-##' Residual Balance
+##' Balance Residual
 ##' 
 ##' This function forces a balance in the passed elements by allocating the 
 ##' imbalance to one element.
@@ -15,6 +15,8 @@
 ##'   allocate the difference to industrial utilization.
 ##' @param foodProcessCommodities Same as feedCommodities, but for commodities
 ##'   where we allocate the difference to food processing.
+##' @param prodCommodities Same as feedCommodities, but for commodities
+##'   where we allocate the difference to production.
 ##' @param imbalanceThreshold The size that the imbalance must be in order for 
 ##'   an adjustment to be made.
 ##'   
@@ -22,9 +24,10 @@
 ##'   is updated.
 ##'   
 
-residualBalance = function(data, standParams, feedCommodities = c(),
+balanceResidual = function(data, standParams, feedCommodities = c(),
                            indCommodities = c(), primaryCommodities = c(),
-                           foodProcessCommodities = c(), imbalanceThreshold = 10){
+                           foodProcessCommodities = c(), prodCommodities = c(),
+                           imbalanceThreshold = 10){
     p = standParams
     data[, imbalance := sum(ifelse(is.na(Value), 0, Value) *
             ifelse(element == p$productionCode, 1,
@@ -44,10 +47,12 @@ residualBalance = function(data, standParams, feedCommodities = c(),
     data[abs(imbalance) > 10 & (!get(standParams$itemVar) %in% primaryCommodities),
          Value := ifelse(
             (element == p$feedCode & get(p$itemVar) %in% feedCommodities) |
-            (element == p$foodProcessingCode & get(p$itemVar) %in% foodProcessCommodities) |
+            (element == p$productionCode & get(p$itemVar) %in% prodCommodities) |
+            (element == p$foodProcCode & get(p$itemVar) %in% foodProcessCommodities) |
             (element == p$industrialCode & get(p$itemVar) %in% indCommodities) |
             (element == p$foodCode & !(get(p$itemVar) %in%
-                            c(indCommodities, feedCommodities, foodProcessCommodities))),
+                            c(indCommodities, feedCommodities,
+                              foodProcessCommodities, prodCommodities))),
             newValue, Value)]
     data[, c("imbalance", "newValue") := NULL]
 }

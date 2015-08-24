@@ -1,7 +1,7 @@
 ##' Final Standardization to Primary Equivalent
 ##' 
 ##' After the full SUA has been balanced, all the commodities need to be rolled 
-##' up to their primary equivalents.  This function does this, aggregating up
+##' up to their primary equivalents.  This function does this, aggregating up 
 ##' trade and food.
 ##' 
 ##' @param data The data.table containing the full dataset for standardization.
@@ -13,24 +13,28 @@
 ##'   example) which columns should be standardized, which columns represent 
 ##'   parents/children, etc.
 ##' @param sugarHack Logical.  See standardizeTree for details.
+##' @param specificTree Logical.  Is a country/year specific commodity tree
+##'   being provided?
 ##'   
 ##' @return A data.table with the aggregated primary commodities.
-##' 
+##'   
 
-finalStandardizationToPrimary = function(data, tree, standParams, sugarHack = TRUE){
-    
-    warning("We need a way of setting shares on tree based on processed ",
-            "availability.  For example, beet sugar and cane sugar may be ",
-            "processed into refined sugar.  When standardizing, we need to ",
-            "standardize refined sugar back to these parents and split by some ",
-            "shares.  The shares should **probably** be the split rates from ",
-            "processing, if available, but such an approach is not currently ",
-            "implemented.")
+finalStandardizationToPrimary = function(data, tree, standParams, sugarHack = TRUE, specificTree = TRUE){
     
     keyCols = standParams$mergeKey[standParams$mergeKey != standParams$itemVar]
+    if(!specificTree){
+        if(nrow(data[, .N, by = c(standParams$geoVar, standParams$yearVar)]) > 1)
+            stop("If not using a specificTree, there should only be one ",
+                 "country and year!")
+        keyCols = keyCols[!keyCols %in% c(standParams$geoVar, standParams$yearVar)]
+        tree[, c(standParams$yearVar) := data[, get(standParams$yearVar)]]
+        tree[, c(standParams$geoVar) := data[, get(standParams$geoVar)]]
+    }
     standTree = collapseEdges(edges = tree, keyCols = keyCols)
+    localParams = standParams
+    localParams$elementPrefix = ""
     out = data[, standardizeTree(data = .SD, tree = standTree,
-                                 standParams = standParams, elements = "Value",
+                                 standParams = localParams, elements = "Value",
                                  sugarHack = sugarHack),
                by = element]
     
