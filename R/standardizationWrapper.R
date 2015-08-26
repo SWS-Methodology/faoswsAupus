@@ -65,6 +65,11 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
     ## STEP 0: Data Quality Checks
     stopifnot(c(p$geoVar, p$yearVar, p$itemVar,
                 "element", "Value") %in% colnames(data))
+    if(!"standardDeviation" %in% colnames(data))
+        data[, standardDeviation := NA]
+    data[, c(p$geoVar) := as.character(p$geoVar)]
+    data[, c(p$yearVar) := as.character(p$yearVar)]
+    data[, c(p$itemVar) := as.character(p$itemVar)]
     stopifnot(c(p$childVar, p$parentVar, p$extractVar,
                 p$targetVar, p$shareVar) %in% colnames(tree))
     stopifnot(c(p$childVar, p$parentVar, p$extractVar,
@@ -95,16 +100,15 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
         nutrientElements = c()
     }
 
-    ## STEP 0.1: Print out table
+    ## STEP 0.1: Add missing element codes for commodities that are in the data
+    ## (so that we can print it).  Then, print the table!
+    data = addMissingElements(data, standParams)
     if(length(printCodes) > 0){
         cat("Initial SUA table:")
         old = copy(data)
         print(printSUATable(data = data, standParams = p, printCodes = printCodes))
     }
-    
-    ## STEP 0.2: Add missing element codes for commodities that are in the data
-    data = addMissingElements(data, standParams)
-        
+
     ## STEP 1: Process forward.
     data = processForward(data = data, tree = tree,
                           standParams = p)$data
