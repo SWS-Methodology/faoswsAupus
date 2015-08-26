@@ -13,13 +13,17 @@
 ##'   example) which columns should be standardized, which columns represent 
 ##'   parents/children, etc.
 ##' @param sugarHack Logical.  See standardizeTree for details.
-##' @param specificTree Logical.  Is a country/year specific commodity tree
+##' @param specificTree Logical.  Is a country/year specific commodity tree 
 ##'   being provided?
+##' @param additiveElements Column names of data which should be
+##'   aggregated/standardized via simple addition.
 ##'   
 ##' @return A data.table with the aggregated primary commodities.
 ##'   
 
-finalStandardizationToPrimary = function(data, tree, standParams, sugarHack = TRUE, specificTree = TRUE){
+finalStandardizationToPrimary = function(data, tree, standParams,
+                                         sugarHack = TRUE, specificTree = TRUE,
+                                         additiveElements = c()){
     
     keyCols = standParams$mergeKey[standParams$mergeKey != standParams$itemVar]
     if(!specificTree){
@@ -27,8 +31,8 @@ finalStandardizationToPrimary = function(data, tree, standParams, sugarHack = TR
             stop("If not using a specificTree, there should only be one ",
                  "country and year!")
         keyCols = keyCols[!keyCols %in% c(standParams$geoVar, standParams$yearVar)]
-        tree[, c(standParams$yearVar) := data[, get(standParams$yearVar)]]
-        tree[, c(standParams$geoVar) := data[, get(standParams$geoVar)]]
+        tree[, c(standParams$yearVar) := data[, get(standParams$yearVar)][1]]
+        tree[, c(standParams$geoVar) := data[, get(standParams$geoVar)][1]]
     }
     standTree = collapseEdges(edges = tree, keyCols = keyCols)
     localParams = standParams
@@ -37,7 +41,22 @@ finalStandardizationToPrimary = function(data, tree, standParams, sugarHack = TR
                                  standParams = localParams, elements = "Value",
                                  sugarHack = sugarHack),
                by = element]
-    
+    if(length(additiveElements) > 0){
+        additiveTree = copy(standTree)
+        additiveTree[, c(standParams$extractVar) := 1]
+        nutrients = lapply(additiveElements, function(nutrient){
+            temp = data[element == standParams$foodCode,
+                        standardizeTree(data = .SD, tree = additiveTree,
+                                        standParams = localParams, elements = nutrient,
+                                        sugarHack = sugarHack)]
+            temp[, Value := get(nutrient)]
+            temp[, element := nutrient]
+            temp[, c(nutrient) := NULL]
+            temp
+        })
+        out = rbind(out, do.call("rbind", nutrients))
+    }
+
     ## Add on the primary value for use in some special cases of
     ## standardization.
     out = merge(out, data[, c(standParams$mergeKey, "element", "Value"),
@@ -74,12 +93,7 @@ finalStandardizationToPrimary = function(data, tree, standParams, sugarHack = TR
     
     ## Production should never be standardized. 
     ## Instead, take the primary value directly.
-    out = merge(out, data[, c(standParams$mergeKey, "element", "Value"),
-                          with = FALSE],
-                by = c(standParams$mergeKey, "element"),
-                suffixes = c("", ".old"), all.x = TRUE)
-    out[element %in% c(standParams$productionCode),
-        Value := Value.old]
+    out[element %in% c(standParams$productionCode), Value := Value.old]
     out[, Value.old := NULL]
     
     return(out)

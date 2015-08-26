@@ -7,8 +7,8 @@
 ##' @param tree The commodity tree, specified as a data.table object.  The 
 ##'   columns should be childVar (the commodity code of the child), parentVar 
 ##'   (the commodity code of the parent), extractionVar (numeric value 
-##'   specifying the extraction rate), and shareVar (numeric value specifying
-##'   how the commodity should be split up).  There are also two optional
+##'   specifying the extraction rate), and shareVar (numeric value specifying 
+##'   how the commodity should be split up).  There are also two optional 
 ##'   columns: targetVar (either "T", "B" or "F" indicating if that commodity is
 ##'   a target commodity, should be backward standardized, or should be forward 
 ##'   standardized) and standDev (containing the standard deviation estimates 
@@ -31,7 +31,8 @@
 ##'   in the tree.
 ##'   
 
-standardizeTree = function(data, tree, elements, standParams, sugarHack = TRUE){
+standardizeTree = function(data, tree, elements, standParams,
+                           additiveElements = c(), sugarHack = TRUE){
 
     ## Assign parameters
     geoVar = standParams$geoVar
@@ -46,7 +47,7 @@ standardizeTree = function(data, tree, elements, standParams, sugarHack = TRUE){
     ## Data Quality Checks
     stopifnot(is(data, "data.table"))
     stopifnot(is(tree, "data.table"))
-    stopifnot(c(geoVar, yearVar, itemVar,
+    stopifnot(c(geoVar, yearVar, itemVar, additiveElements,
               paste0(elementPrefix, elements)) %in%
                   colnames(data))
     stopifnot(c(geoVar, yearVar, childVar, parentVar, extractVar, shareVar)
@@ -143,7 +144,7 @@ standardizeTree = function(data, tree, elements, standParams, sugarHack = TRUE){
         ## Bind back in the corrected rows
         output = rbind(output, update)
     }
-    
+
     ## Reshape to put back into the same shape as the passed data
     setnames(output, parentVar, itemVar)
     output[, measuredElement := paste0(elementPrefix,

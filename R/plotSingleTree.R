@@ -28,7 +28,8 @@ plotSingleTree = function(edges, parentColname, childColname,
     ## Get the level for each node so we know which group to plot it in.
     level = getCommodityLevel(commodityTree = edges,
                               parentColname = parentColname,
-                              childColname = childColname)
+                              childColname = childColname,
+                              returnMinLevel = FALSE)
     level = level[order(level), ]
     levelCounts = level[order(level), .N, by = "level"]
     
