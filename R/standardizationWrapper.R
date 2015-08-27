@@ -67,9 +67,9 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
                 "element", "Value") %in% colnames(data))
     if(!"standardDeviation" %in% colnames(data))
         data[, standardDeviation := NA]
-    data[, c(p$geoVar) := as.character(p$geoVar)]
-    data[, c(p$yearVar) := as.character(p$yearVar)]
-    data[, c(p$itemVar) := as.character(p$itemVar)]
+    data[, c(p$geoVar) := as.character(get(p$geoVar))]
+    data[, c(p$yearVar) := as.character(get(p$yearVar))]
+    data[, c(p$itemVar) := as.character(get(p$itemVar))]
     stopifnot(c(p$childVar, p$parentVar, p$extractVar,
                 p$targetVar, p$shareVar) %in% colnames(tree))
     stopifnot(c(p$childVar, p$parentVar, p$extractVar,
@@ -112,7 +112,9 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
     ## STEP 1: Process forward.
     data = processForward(data = data, tree = tree,
                           standParams = p)$data
-    tree = tree[get(p$targetVar) != "F", ]
+    ## Delete nodes processed forward
+    forwardParents = tree[get(p$targetVar) == "F", unique(get(p$parentVar))]
+    tree = tree[!parentID %in% forwardParents, ]
     if(length(printCodes) > 0){
         cat("\nSUA table after processing forward:")
         data = markUpdated(new = data, old = old, standParams = p)
@@ -134,10 +136,8 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
     ## updated.  Instead, the food value should be updated, and this is what 
     ## will happen if that element is not specified to any of the groupings in
     ## balanceResidual()
-    prodEl = setdiff(prodEl, officialProd)
     balanceResidual(data, p,
                     primaryCommodities = primaryEl,
-                    prodCommodities = prodEl,
                     foodProcessCommodities = foodProcEl
                     )
     if(length(printCodes) > 0){
@@ -195,9 +195,9 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
                   ifelse(is.na(newShare), get(p$shareVar), newShare)]
     if(length(printCodes) > 0){
         cat("\nAvailability of parents/children:\n\n")
-        print(standTree[get(p$childVar) %in% printCodes,
+        print(knitr::kable(standTree[get(p$childVar) %in% printCodes,
                    c(p$childVar, p$parentVar, p$extractVar, "availability"),
-                   with = FALSE])
+                   with = FALSE]))
         plotTree = plotTree[!is.na(get(p$childVar)) & !is.na(get(p$parentVar)) &
                                 get(p$childVar) %in% printCodes, ]
         plotSingleTree(edges = plotTree, parentColname = p$parentVar,
@@ -236,7 +236,8 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
               param2 = sapply(standardDeviation, na2zero),
               sign = ifelse(element %in% c(p$productionCode, p$importCode), 1, -1),
               lbounds = ifelse(element %in% c(p$stockCode, p$touristCode), -Inf, 0),
-              optimize = "constrOptim", constrTol = 1e-6)]
+              optimize = "constrOptim", constrTol = 1e-6),
+         by = c(p$itemVar)]
     ## To adjust calories later, compute the ratio for how much food has been 
     ## adjusted by.  This looks like a "mean", but really we're just using the
     ## mean to select the one non-NA element.
@@ -260,6 +261,15 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
     ## STEP 6: Update calories of processed products proportionally based on
     ## updated food element values.
     data[(nutrientElement), Value := Value * foodAdjRatio]
+    if(length(printCodes) > 0){
+        cat("\nSUA table with updated nutrient values:")
+        data = markUpdated(new = data, old = old, standParams = p)
+        old = copy(data)
+        print(printSUATable(data = data, standParams = p, printCodes = printCodes,
+                            printProcessing = FALSE,
+                            nutrientElements = nutrientElements))
+        data[, updateFlag := NULL]
+    }
     
     ## Last step: clean up column names of data
     data[, c("balancedValue", "nutrientElement", "foodAdjRatio") := NULL]

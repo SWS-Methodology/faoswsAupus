@@ -32,8 +32,7 @@
 
 balanceResidual = function(data, standParams, feedCommodities = c(),
                            indCommodities = c(), primaryCommodities = c(),
-                           foodProcessCommodities = c(), prodCommodities = c(),
-                           imbalanceThreshold = 10){
+                           foodProcessCommodities = c(), imbalanceThreshold = 10){
     p = standParams
     data[, imbalance := sum(ifelse(is.na(Value), 0, Value) *
             ifelse(element == p$productionCode, 1,
@@ -50,8 +49,13 @@ balanceResidual = function(data, standParams, feedCommodities = c(),
             ifelse(element == p$residualCode, -1, 0))))))))))))),
          by = c(standParams$mergeKey)]
     data[, newValue := ifelse(is.na(Value), 0, Value) + imbalance]
-    ## Supply > Utilization
-    data[imbalance > 10 & (!get(standParams$itemVar) %in% primaryCommodities),
+    data[, officialProd := any(element == standParams$productionCode &
+                                   !is.na(Value) & Value > 0),
+         by = c(standParams$itemVar)]
+    ## Supply > Utilization: assign difference to food, feed, etc.  Or, if 
+    ## production is official, force a balance by adjusting food, feed, etc.
+    data[(imbalance > 10 | officialProd)
+         & (!get(standParams$itemVar) %in% primaryCommodities),
          Value := ifelse(
             (element == p$feedCode & get(p$itemVar) %in% feedCommodities) |
             (element == p$foodProcCode & get(p$itemVar) %in% foodProcessCommodities) |
@@ -61,7 +65,8 @@ balanceResidual = function(data, standParams, feedCommodities = c(),
                               foodProcessCommodities))),
             newValue, Value)]
     ## Supply < Utilization
-    data[imbalance < -10 & (!get(standParams$itemVar) %in% primaryCommodities) &
+    data[imbalance < -10 & !officialProd &
+             (!get(standParams$itemVar) %in% primaryCommodities) &
              element == p$productionCode, Value := -newValue]
     data[, c("imbalance", "newValue") := NULL]
 }
