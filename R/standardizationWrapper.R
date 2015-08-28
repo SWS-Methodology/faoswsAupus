@@ -75,6 +75,11 @@ standardizationWrapper = function(data, tree, standParams,
         warning("tree has some NA children.  Those edges have been deleted.")
         tree = tree[!is.na(get(p$childVar)), ]
     }
+    if(!"standParentID" %in% colnames(tree)){
+        warning("standParentID is not in the colnames of tree!  No commodities ",
+                "will be grafted onto a different tree!")
+        tree[, standParentID := NA]
+    }
     if(any(is.na(tree[, get(p$parentVar)]))){
         warning("tree has some NA parents.  Those edges have been deleted.")
         tree = tree[!is.na(get(p$parentVar)), ]
@@ -194,11 +199,22 @@ standardizationWrapper = function(data, tree, standParams,
                        box.cex = 1)
     }
 
-    ## STEP 4: Standardize commodities to balancing level
+    ## STEP 4: Standardize commodities to balancing level Note: food processing 
+    ## amounts should be set to zero for almost all commodities (as food 
+    ## processing shouldn't be standardized, generally).  However, if a 
+    ## processed product is standardized in a different tree, then a balanced 
+    ## SUA line will NOT imply a (roughly, i.e. we still must optimize) balanced
+    ## FBS.  Thus, the food processing for grafted commodities should be rolled
+    ## up into the parents as "Food Processing" or "Food Manufacturing".
+    foodProcElements = tree[!is.na(standParentID), unique(parentID)]
+    data[element == p$foodProcCode & !get(p$itemVar) %in% foodProcElements, Value := 0]
     data = finalStandardizationToPrimary(data = data, tree = tree,
                                          standParams = p, sugarHack = FALSE,
                                          specificTree = FALSE,
                                          additiveElements = nutrientElements)
+    stop("Standardization needs some work here!  The food processing for some ",
+         "elements might roll up correctly, but we need to check.  Also, get ",
+         "the elements with standParentID to roll up appropriately.")
     if(length(printCodes) > 0){
         cat("\nSUA table after standardization:")
         data = markUpdated(new = data, old = old, standParams = p)
@@ -213,7 +229,7 @@ standardizationWrapper = function(data, tree, standParams,
     data = data[element %in% c(p$productionCode, p$importCode, p$exportCode,
                                p$stockCode, p$foodCode, p$feedCode, p$seedCode,
                                p$touristCode, p$industrialCode, p$wasteCode,
-                               nutrientElements), ]
+                               nutrientElements, p$foodProcCode), ]
     data[, nutrientElement := element %in% nutrientElements]
     warning("Not sure how to compute standard deviations!  Currently just 10% ",
             "of value!")
