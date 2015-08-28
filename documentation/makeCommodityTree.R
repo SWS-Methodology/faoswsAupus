@@ -57,8 +57,12 @@ oiData[share > 0, length(unique(parentID)), by = childID]
 # Autocuts remove edges from the tree
 ###############################################################################
 
+# autocuts = fread(paste0(dataDir, "annex4.csv"))
+# oiData = oiData[!childID %in% autocuts$V1, ]
+## Autocuts shouldn't delete the tree but rather cause a different
+## standardization:
 autocuts = fread(paste0(dataDir, "annex4.csv"))
-oiData = oiData[!childID %in% autocuts$V1, ]
+oiData[, autoCut := (childID %in% autocuts$V1)]
 
 ###############################################################################
 # Commodities with weight 0
@@ -113,9 +117,11 @@ conversionFactor[childID == "328", ] # Not sure what to do with this case
 # Construct standardization tree
 ###############################################################################
 
-suaTree = unique(oiData[share > 0, c("parentID", "childID"), with = FALSE])
+suaTree = unique(oiData[share > 0, c("parentID", "childID", "autoCut"),
+                        with = FALSE])
 suaTree = merge.data.frame(suaTree, weights[, c("commodityCode", "weight",
-                                                "caloriesOnly", "target"), with = FALSE],
+                                                "caloriesOnly", "target"),
+                                            with = FALSE],
                            by.x = "childID", by.y = "commodityCode")
 ## HACK!  Process sugar nodes forward to 162.
 suaTree$target[suaTree$childID == 162] = "F"
@@ -151,6 +157,8 @@ suaTree[weight == "w=0", extractionRate := Inf]
 suaTree[is.na(extractionRate), extractionRate := 1]
 suaTree[, calorieExtractionRate := ifelse(weight == "w=0" & caloriesOnly == "", 0, 1)]
 suaTree[, c("weight", "caloriesOnly") := NULL]
+suaTree = suaTree[, c("parentID", "childID", "extractionRate", "autoCut",
+                      "target", "calorieExtractionRate"), with = FALSE]
 
 fbsTree = fread(paste0(dataDir, "annex8.csv"))
 

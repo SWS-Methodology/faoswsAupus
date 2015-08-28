@@ -38,9 +38,6 @@
 ##'   provide information about the columns of data and tree, specifying (for 
 ##'   example) which columns should be standardized, which columns represent 
 ##'   parents/children, etc.
-##' @param standTree The commodity tree which details how elements are
-##'   standardized/aggregated into other elements.  Defaults to tree, but is
-##'   likely different.
 ##' @param nutrientData A data.table containing one column with the item codes 
 ##'   (and this column's name must match standParams$itemVar) and additional 
 ##'   columns representing nutrient information.  For example, you could have 4 
@@ -56,7 +53,7 @@
 ##'   nutrientData was provided.
 ##'   
 
-standardizationWrapper = function(data, tree, standParams, standTree = tree,
+standardizationWrapper = function(data, tree, standParams,
                                   nutrientData = NULL, printCodes = c()){
     
     ## Reassign standParams to p for brevity
@@ -72,25 +69,15 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
     data[, c(p$itemVar) := as.character(get(p$itemVar))]
     stopifnot(c(p$childVar, p$parentVar, p$extractVar,
                 p$targetVar, p$shareVar) %in% colnames(tree))
-    stopifnot(c(p$childVar, p$parentVar, p$extractVar,
-                p$targetVar, p$shareVar) %in% colnames(standTree))
     if(nrow(data[, .N, by = c(p$geoVar, p$yearVar)]) > 1)
         stop("standardizationWrapper works with one country/year at a time only!")
     if(any(is.na(tree[, get(p$childVar)]))){
-        warning("Tree has some NA children.  Those edges have been deleted.")
+        warning("tree has some NA children.  Those edges have been deleted.")
         tree = tree[!is.na(get(p$childVar)), ]
     }
-    if(any(is.na(standTree[, get(p$childVar)]))){
-        warning("standTree has some NA children.  Those edges have been deleted.")
-        standTree = standTree[!is.na(get(p$childVar)), ]
-    }
     if(any(is.na(tree[, get(p$parentVar)]))){
-        warning("Tree has some NA parents.  Those edges have been deleted.")
+        warning("tree has some NA parents.  Those edges have been deleted.")
         tree = tree[!is.na(get(p$parentVar)), ]
-    }
-    if(any(is.na(standTree[, get(p$parentVar)]))){
-        warning("standTree has some NA parents.  Those edges have been deleted.")
-        standTree = standTree[!is.na(get(p$parentVar)), ]
     }
     if(!is.null(nutrientData)){
         stopifnot(p$itemVar %in% colnames(nutrientData))
@@ -179,23 +166,23 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
     mergeToTree = data[, list(availability = mean(availability)),
                         by = c(p$itemVar)]
     setnames(mergeToTree, p$itemVar, p$parentVar)
-    plotTree = copy(standTree)
-    standTree = merge(standTree, mergeToTree, by = p$parentVar, all.x = TRUE)
-    availability = calculateAvailability(standTree, p)
-    standTree = collapseEdges(edges = standTree, parentName = p$parentVar,
+    plotTree = copy(tree)
+    tree = merge(tree, mergeToTree, by = p$parentVar, all.x = TRUE)
+    availability = calculateAvailability(tree, p)
+    tree = collapseEdges(edges = tree, parentName = p$parentVar,
                               childName = p$childVar,
                               extractionName = p$extractVar,
                               keyCols = NULL)
-    standTree[, availability := NULL]
-    standTree = merge(standTree, availability,
+    tree[, availability := NULL]
+    tree = merge(tree, availability,
                       by = c(p$childVar, p$parentVar))
-    standTree[, newShare := availability / sum(availability),
+    tree[, newShare := availability / sum(availability),
               by = c(p$childVar)]
-    standTree[, c(p$shareVar) :=
+    tree[, c(p$shareVar) :=
                   ifelse(is.na(newShare), get(p$shareVar), newShare)]
     if(length(printCodes) > 0){
         cat("\nAvailability of parents/children:\n\n")
-        print(knitr::kable(standTree[get(p$childVar) %in% printCodes,
+        print(knitr::kable(tree[get(p$childVar) %in% printCodes,
                    c(p$childVar, p$parentVar, p$extractVar, "availability"),
                    with = FALSE]))
         plotTree = plotTree[!is.na(get(p$childVar)) & !is.na(get(p$parentVar)) &
@@ -208,7 +195,7 @@ standardizationWrapper = function(data, tree, standParams, standTree = tree,
     }
 
     ## STEP 4: Standardize commodities to balancing level
-    data = finalStandardizationToPrimary(data = data, tree = standTree,
+    data = finalStandardizationToPrimary(data = data, tree = tree,
                                          standParams = p, sugarHack = FALSE,
                                          specificTree = FALSE,
                                          additiveElements = nutrientElements)
