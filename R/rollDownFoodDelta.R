@@ -56,15 +56,10 @@ rollDownFoodDelta = function(data, tree, standParams, specificTree = FALSE,
             "distributions, this function should become much simpler.  ",
             "It should then just ensure production of by-products match.")
     
-    ## Remove unneeded columns
-    tree = tree[, c(standParams$childVar, standParams$parentVar,
-                standParams$extractVar, standParams$groupID,
-                standParams$shareVar),
-            with = FALSE]
-    
-    ## In this function, we'll want to do merging/aggregating but often not
-    ## group by the item variable.
-    localMergeKey = c(standParams$mergeKey[standParams$mergeKey != standParams$itemVar])
+    standTree = copy(tree)
+    setnames(standTree, standParams$childVar, standParams$itemVar)
+    dataToUpdate = merge(data, standTree, by = standParams$itemVar)
+    dataToUpdate[, count := .N, by = c(standParams
     
     processingLevel = getCommodityLevel(commodityTree = tree,
                                         parentColname = standParams$parentVar,
