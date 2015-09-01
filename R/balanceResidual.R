@@ -1,7 +1,15 @@
-##' Residual Balance
+##' Balance Residual
 ##' 
 ##' This function forces a balance in the passed elements by allocating the 
 ##' imbalance to one element.
+##' 
+##' If supply < utilization, the imbalance is always assigned to production (as 
+##' trade is generally assumed to be fixed and stock changes are usually 0 and 
+##' hence also fixed).
+##' 
+##' If supply > utilization, we must choose where to allocate the imbalance. 
+##' The default variable is food, but for some commodities we could instead use
+##' feed, food processing, or industrial.
 ##' 
 ##' @param data The data.table containing the full dataset for standardization.
 ##' @param standParams The parameters for standardization.  These parameters 
@@ -13,7 +21,7 @@
 ##'   list specifies which elements should allocate such a difference to feed.
 ##' @param indCommodities Same as feedCommodities, but for commodities where we 
 ##'   allocate the difference to industrial utilization.
-##' @param foodProcessCommodities Same as feedCommodities, but for commodities
+##' @param foodProcessCommodities Same as feedCommodities, but for commodities 
 ##'   where we allocate the difference to food processing.
 ##' @param imbalanceThreshold The size that the imbalance must be in order for 
 ##'   an adjustment to be made.
@@ -22,7 +30,7 @@
 ##'   is updated.
 ##'   
 
-residualBalance = function(data, standParams, feedCommodities = c(),
+balanceResidual = function(data, standParams, feedCommodities = c(),
                            indCommodities = c(), primaryCommodities = c(),
                            foodProcessCommodities = c(), imbalanceThreshold = 10){
     p = standParams
@@ -41,13 +49,24 @@ residualBalance = function(data, standParams, feedCommodities = c(),
             ifelse(element == p$residualCode, -1, 0))))))))))))),
          by = c(standParams$mergeKey)]
     data[, newValue := ifelse(is.na(Value), 0, Value) + imbalance]
-    data[abs(imbalance) > 10 & (!get(standParams$itemVar) %in% primaryCommodities),
+    data[, officialProd := any(element == standParams$productionCode &
+                                   !is.na(Value) & Value > 0),
+         by = c(standParams$itemVar)]
+    ## Supply > Utilization: assign difference to food, feed, etc.  Or, if 
+    ## production is official, force a balance by adjusting food, feed, etc.
+    data[(imbalance > 10 | officialProd)
+         & (!get(standParams$itemVar) %in% primaryCommodities),
          Value := ifelse(
             (element == p$feedCode & get(p$itemVar) %in% feedCommodities) |
-            (element == p$foodProcessingCode & get(p$itemVar) %in% foodProcessCommodities) |
+            (element == p$foodProcCode & get(p$itemVar) %in% foodProcessCommodities) |
             (element == p$industrialCode & get(p$itemVar) %in% indCommodities) |
             (element == p$foodCode & !(get(p$itemVar) %in%
-                            c(indCommodities, feedCommodities, foodProcessCommodities))),
+                            c(indCommodities, feedCommodities,
+                              foodProcessCommodities))),
             newValue, Value)]
+    ## Supply < Utilization
+    data[imbalance < -10 & !officialProd &
+             (!get(standParams$itemVar) %in% primaryCommodities) &
+             element == p$productionCode, Value := -newValue]
     data[, c("imbalance", "newValue") := NULL]
 }

@@ -5,33 +5,34 @@
 ##' 
 ##' @param data A data.table object containing the data of interest.
 ##' @param tree The commodity tree, specified as a data.table object.  The 
-##'   columns should be childID (the commodity code of the child), parentID (the
-##'   commodity code of the parent), extractionRate (numeric value specifying 
-##'   the extraction rate), and share (numeric value specifying how the 
-##'   commodity should be split up).  There are also two optional columns: 
-##'   target (either "T", "B" or "F" indicating if that commodity is a target 
-##'   commodity, should be backward standardized, or should be forward 
+##'   columns should be childVar (the commodity code of the child), parentVar 
+##'   (the commodity code of the parent), extractionVar (numeric value 
+##'   specifying the extraction rate), and shareVar (numeric value specifying 
+##'   how the commodity should be split up).  There are also two optional 
+##'   columns: targetVar (either "T", "B" or "F" indicating if that commodity is
+##'   a target commodity, should be backward standardized, or should be forward 
 ##'   standardized) and standDev (containing the standard deviation estimates 
 ##'   which should be aggregated as well).  If the target is missing, everything
 ##'   is assumed to be backward standardized.  If no standDev is provided, a 
-##'   deviation of 0 is assumed.  The actual names of the columns are specified
+##'   deviation of 0 is assumed.  The actual names of the columns are specified 
 ##'   in standParams.
 ##' @param elements The element codes for nodes that should be standardized. 
 ##'   These correspond to the different "elements" of the FBS, such as 
 ##'   production, imports, exports, etc.
-##' @param standParams The parameters for standardization.  These parameters
-##'   provide information about the columns of data and tree, specifying (for
-##'   example) which columns should be standardized, which columns represent
+##' @param standParams The parameters for standardization.  These parameters 
+##'   provide information about the columns of data and tree, specifying (for 
+##'   example) which columns should be standardized, which columns represent 
 ##'   parents/children, etc.
-##' @param sugarHack Logical.  Indicates if the commodity tree should be edited
-##'   by this program to give the correction standardization of sugar?  This is
+##' @param sugarHack Logical.  Indicates if the commodity tree should be edited 
+##'   by this program to give the correction standardization of sugar?  This is 
 ##'   a hack and should be fixed, but for now it is generally necessary.
 ##'   
 ##' @return A data.table with the commodities standardized to the highest level 
 ##'   in the tree.
 ##'   
 
-standardizeTree = function(data, tree, elements, standParams, sugarHack = TRUE){
+standardizeTree = function(data, tree, elements, standParams,
+                           additiveElements = c(), sugarHack = TRUE){
 
     ## Assign parameters
     geoVar = standParams$geoVar
@@ -46,7 +47,7 @@ standardizeTree = function(data, tree, elements, standParams, sugarHack = TRUE){
     ## Data Quality Checks
     stopifnot(is(data, "data.table"))
     stopifnot(is(tree, "data.table"))
-    stopifnot(c(geoVar, yearVar, itemVar,
+    stopifnot(c(geoVar, yearVar, itemVar, additiveElements,
               paste0(elementPrefix, elements)) %in%
                   colnames(data))
     stopifnot(c(geoVar, yearVar, childVar, parentVar, extractVar, shareVar)
@@ -143,7 +144,7 @@ standardizeTree = function(data, tree, elements, standParams, sugarHack = TRUE){
         ## Bind back in the corrected rows
         output = rbind(output, update)
     }
-    
+
     ## Reshape to put back into the same shape as the passed data
     setnames(output, parentVar, itemVar)
     output[, measuredElement := paste0(elementPrefix,
