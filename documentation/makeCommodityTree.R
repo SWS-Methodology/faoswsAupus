@@ -16,7 +16,8 @@
 ## 
 
 library(data.table)
-dataDir = "~/Documents/Github/faoswsAupus/documentation/"
+# dataDir = "~/Documents/Github/faoswsAupus/documentation/"
+dataDir = "~/GitHub/faoswsAupus/documentation/"
 
 ###############################################################################
 # Output-Input list defines the tree structure.
@@ -176,4 +177,4 @@ setcolorder(fbsTree, c("commodityID", "conversionFactor", "fbsID4",
 ## FBS tree.
 # fbsTree = fbsTree[commodityID != 340, ]
 
-save(fbsTree, suaTree, file = "~/Documents/Github/faoswsAupus/data/commodityTrees.RData")
+save(fbsTree, suaTree, file = paste0(dataDir, "/../data/commodityTrees.RData"))

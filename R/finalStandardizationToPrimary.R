@@ -25,6 +25,48 @@ finalStandardizationToPrimary = function(data, tree, standParams,
                                          sugarHack = TRUE, specificTree = TRUE,
                                          additiveElements = c()){
     
+    ## Note: food processing amounts should be set to zero for almost all
+    ## commodities (as food processing shouldn't be standardized, generally). 
+    ## However, if a processed product is standardized in a different tree, then
+    ## a balanced SUA line will NOT imply a (roughly, i.e. we still must
+    ## optimize) balanced FBS.  Thus, the food processing for grafted
+    ## commodities should be rolled up into the parents as "Food Processing" or
+    ## "Food Manufacturing".
+    foodProcElements = tree[!is.na(get(standParams$standParentVar)),
+                            unique(get(standParams$childVar))]
+    data[element == standParams$foodProcCode &
+             !get(standParams$itemVar) %in% foodProcElements, Value := 0]
+    ## Assign production of these commodities to their food processing element
+    ## so that we can roll that up.
+    toMerge = data[get(standParams$itemVar) %in% foodProcElements &
+                       element == "5510", ]
+    toMerge[, element := standParams$foodProcCode]
+    toMerge = toMerge[, c(standParams$mergeKey, "element", "Value"), with = FALSE]
+    data = merge(data, toMerge, by = c(standParams$mergeKey, "element"), all.x = TRUE,
+                 suffixes = c("", ".new"))
+    data[!is.na(Value.new), Value := Value.new]
+    
+    ## Now, we must adjust the commodity tree for the pruned elements.  We want 
+    ## all elements to roll up to the new parent ID except for the food 
+    ## processing.  Thus, we must keep both parents in the tree and use new 
+    ## codes to identify the two cases.  The nodes rolling into new parentIDs
+    ## get new_ prefixes.
+    data[get(standParams$itemVar) %in% foodProcElements & element == standParams$foodProcCode,
+         c(standParams$itemVar) := paste0("f???_", get(standParams$itemVar))]
+    tree[get(standParams$childVar) %in% foodProcElements,
+         c(standParams$childVar) := paste0("f???_", get(standParams$childVar))]
+    ## Originally I thought we needed to roll up the new elements into a new
+    ## commodity.  But, that's not the case; if we leave those edges off the
+    ## tree entirely, they'll standardize to themselves.
+#     addToTree = tree[!is.na(get(standParams$standParentVar)), ]
+#     addToTree[, c("groupID", "availability") := NULL]
+#     addToTree[, share := 1]
+#     addToTree[, c(standParams$parentVar) := get(standParams$standParentVar)]
+#     addToTree[, c(standParams$extractVar) := get(standParams$standExtractVar)]
+#     addToTree[, c(standParams$childVar) := paste0("new_", get(standParams$childVar))]
+#     addToTree = unique(addToTree)
+#     tree = rbindlist(list(tree, addToTree), fill = TRUE)
+    
     keyCols = standParams$mergeKey[standParams$mergeKey != standParams$itemVar]
     if(!specificTree){
         if(nrow(data[, .N, by = c(standParams$geoVar, standParams$yearVar)]) > 1)
@@ -91,9 +133,18 @@ finalStandardizationToPrimary = function(data, tree, standParams,
 #     out[!is.na(Value.new), Value := Value.new]
 #     out[, Value.new := NULL]
     
-    ## Production should never be standardized. 
-    ## Instead, take the primary value directly.
-    out[element %in% c(standParams$productionCode), Value := Value.old]
+    ## Production should never be standardized. Instead, take the primary value 
+    ## directly.  But, the elements in the food processing tree won't have a
+    ## previously assigned production, so don't do this for them.
+    foodProcParents = tree[grepl("f???_", get(standParams$childVar)),
+                           unique(get(standParams$parentVar))]
+    out[element %in% c(standParams$productionCode) &
+            !get(standParams$itemVar) %in% foodProcParents,
+        Value := Value.old]
+    warning("The standardization approach may not work for production in ",
+            "the case of grafted trees IF those grafted trees have more than ",
+            "one level.  This likely won't occur often, but we'll need to ",
+            "check and confirm.")
     out[, Value.old := NULL]
     
     return(out)

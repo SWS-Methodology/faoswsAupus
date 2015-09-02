@@ -41,20 +41,16 @@ printSUATable = function(data, standParams, printCodes, printProcessing = TRUE,
                             fill = NA)
     setnames(printDT, standParams$itemVar, "Item")
 
+    setnames(printDT, paste0("Value_measuredElement_", fbsElements),
+             c("Production", "Feed", "Seed", "Loss",
+               "Food", "StockChange", "Imports", "Exports",
+               "Food Processing", "Industrial", "Tourist"))
     if(printProcessing){
-        setnames(printDT, paste0("Value_measuredElement_", fbsElements),
-            c("Production", "Feed", "Seed", "Loss",
-              "Food", "StockChange", "Imports", "Exports",
-              "Food Processing", "Industrial", "Tourist"))
         items = c("Item", "Production", "Imports", "Exports", "StockChange",
                   "Food", "Food Processing", "Feed", "Seed", "Tourist",
                   "Industrial", "Loss", nutrientElements)
     } else {
         fbsElements = fbsElements[fbsElements != standParams$foodProcCode]
-        setnames(printDT, paste0("Value_measuredElement_", fbsElements),
-            c("Production", "Feed", "Seed", "Loss",
-              "Food", "StockChange", "Imports", "Exports",
-              "Industrial", "Tourist"))
         items = c("Item", "Production", "Imports", "Exports", "StockChange",
                   "Food", "Feed", "Seed", "Tourist", "Industrial", "Loss",
                   nutrientElements)

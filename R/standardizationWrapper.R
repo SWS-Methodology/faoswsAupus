@@ -30,10 +30,19 @@
 ##' 6. Update calories of processed products proportionally based on updated 
 ##' food element values.
 ##' 
+##' 7. (only if fbsTree is provided) Sum all commodities up to their FBS level
+##' categories.  This is the final step to prepare data for FAOSTAT.
+##' 
 ##' @param data The data.table containing the full dataset for standardization.
 ##' @param tree The commodity tree which details how elements can be processed 
 ##'   into other elements.  It does not, however, specify which elements get 
 ##'   aggregated into others.
+##' @param fbsTree This "tree" should just have three columns: 
+##'   standParams$parentID, standParams$childID, and standParams$extractVar 
+##'   (which if missing will just be assigned all values of 1).  This tree 
+##'   specifies how SUA commodities get combined to form the FBS aggregates.  If
+##'   NULL, the last step (aggregation to FBS codes) is skipped and data is 
+##'   simply returned at SUA level.
 ##' @param standParams The parameters for standardization.  These parameters 
 ##'   provide information about the columns of data and tree, specifying (for 
 ##'   example) which columns should be standardized, which columns represent 
@@ -53,13 +62,14 @@
 ##'   nutrientData was provided.
 ##'   
 
-standardizationWrapper = function(data, tree, standParams,
+standardizationWrapper = function(data, tree, fbsTree = NULL, standParams,
                                   nutrientData = NULL, printCodes = c()){
     
     ## Reassign standParams to p for brevity
     p = standParams
     
     ## STEP 0: Data Quality Checks
+    # Checks for data
     stopifnot(c(p$geoVar, p$yearVar, p$itemVar,
                 "element", "Value") %in% colnames(data))
     if(!"standardDeviation" %in% colnames(data))
@@ -67,6 +77,7 @@ standardizationWrapper = function(data, tree, standParams,
     data[, c(p$geoVar) := as.character(get(p$geoVar))]
     data[, c(p$yearVar) := as.character(get(p$yearVar))]
     data[, c(p$itemVar) := as.character(get(p$itemVar))]
+    # Checks for tree
     stopifnot(c(p$childVar, p$parentVar, p$extractVar,
                 p$targetVar, p$shareVar) %in% colnames(tree))
     if(nrow(data[, .N, by = c(p$geoVar, p$yearVar)]) > 1)
@@ -75,15 +86,28 @@ standardizationWrapper = function(data, tree, standParams,
         warning("tree has some NA children.  Those edges have been deleted.")
         tree = tree[!is.na(get(p$childVar)), ]
     }
-    if(!"standParentID" %in% colnames(tree)){
-        warning("standParentID is not in the colnames of tree!  No commodities ",
-                "will be grafted onto a different tree!")
-        tree[, standParentID := NA]
+    if(!p$standParentVar %in% colnames(tree)){
+        warning("p$standParentVar is not in the colnames of tree!  No ",
+                "commodities will be grafted onto a different tree!")
+        tree[, c(p$standParentVar) := NA]
     }
+    if(!p$standExtractVar %in% colnames(tree)){
+        warning("p$standExtractVar is not in the colnames of tree!  No ",
+                "new extraction rates will be used!")
+        tree[!is.na(get(p$standParentVar)),
+             c(p$standExtractVar) := get(p$extractVar)]
+    }
+    stopifnot(!is.na(tree[, get(p$extractVar)]))
+    # Checks for fbsTree
+    stopifnot(c(p$itemVar, p$extractVar, "fbsID1",
+                "fbsID2", "fbsID3", "fbsID4") %in% colnames(fbsTree))
+    ## Check that all standParentVar are NA or a value, never ""
+    stopifnot(tree[!is.na(get(p$standParentVar)), get(p$standParentVar)] != "")
     if(any(is.na(tree[, get(p$parentVar)]))){
         warning("tree has some NA parents.  Those edges have been deleted.")
         tree = tree[!is.na(get(p$parentVar)), ]
     }
+    # Checks for nutrientData
     if(!is.null(nutrientData)){
         stopifnot(p$itemVar %in% colnames(nutrientData))
         stopifnot(ncol(nutrientData) > 1)
@@ -94,7 +118,7 @@ standardizationWrapper = function(data, tree, standParams,
 
     ## STEP 0.1: Add missing element codes for commodities that are in the data
     ## (so that we can print it).  Then, print the table!
-    data = addMissingElements(data, standParams)
+    data = addMissingElements(data, p)
     if(length(printCodes) > 0){
         cat("Initial SUA table:")
         old = copy(data)
@@ -181,10 +205,11 @@ standardizationWrapper = function(data, tree, standParams,
     tree[, availability := NULL]
     tree = merge(tree, availability,
                       by = c(p$childVar, p$parentVar))
-    tree[, newShare := availability / sum(availability),
+    tree[, newShare := availability / sum(availability, na.rm = TRUE),
               by = c(p$childVar)]
     tree[, c(p$shareVar) :=
                   ifelse(is.na(newShare), get(p$shareVar), newShare)]
+    tree[, newShare := NULL]
     if(length(printCodes) > 0){
         cat("\nAvailability of parents/children:\n\n")
         print(knitr::kable(tree[get(p$childVar) %in% printCodes,
@@ -199,22 +224,11 @@ standardizationWrapper = function(data, tree, standParams,
                        box.cex = 1)
     }
 
-    ## STEP 4: Standardize commodities to balancing level Note: food processing 
-    ## amounts should be set to zero for almost all commodities (as food 
-    ## processing shouldn't be standardized, generally).  However, if a 
-    ## processed product is standardized in a different tree, then a balanced 
-    ## SUA line will NOT imply a (roughly, i.e. we still must optimize) balanced
-    ## FBS.  Thus, the food processing for grafted commodities should be rolled
-    ## up into the parents as "Food Processing" or "Food Manufacturing".
-    foodProcElements = tree[!is.na(standParentID), unique(parentID)]
-    data[element == p$foodProcCode & !get(p$itemVar) %in% foodProcElements, Value := 0]
+    ## STEP 4: Standardize commodities to balancing level
     data = finalStandardizationToPrimary(data = data, tree = tree,
                                          standParams = p, sugarHack = FALSE,
                                          specificTree = FALSE,
                                          additiveElements = nutrientElements)
-    stop("Standardization needs some work here!  The food processing for some ",
-         "elements might roll up correctly, but we need to check.  Also, get ",
-         "the elements with standParentID to roll up appropriately.")
     if(length(printCodes) > 0){
         cat("\nSUA table after standardization:")
         data = markUpdated(new = data, old = old, standParams = p)
@@ -222,7 +236,7 @@ standardizationWrapper = function(data, tree, standParams,
         print(printSUATable(data = data, standParams = p,
                             printCodes = printCodes,
                             nutrientElements = nutrientElements,
-                            printProcessing = FALSE))
+                            printProcessing = TRUE))
     }
     
     ## STEP 5: Balance at the balancing level.
@@ -256,7 +270,7 @@ standardizationWrapper = function(data, tree, standParams,
         data = markUpdated(new = data, old = old, standParams = p)
         old = copy(data)
         print(printSUATable(data = data, standParams = p, printCodes = printCodes,
-                            printProcessing = FALSE,
+                            printProcessing = TRUE,
                             nutrientElements = nutrientElements))
         data[, updateFlag := NULL]
     }
@@ -269,12 +283,44 @@ standardizationWrapper = function(data, tree, standParams,
         data = markUpdated(new = data, old = old, standParams = p)
         old = copy(data)
         print(printSUATable(data = data, standParams = p, printCodes = printCodes,
-                            printProcessing = FALSE,
+                            printProcessing = TRUE,
                             nutrientElements = nutrientElements))
         data[, updateFlag := NULL]
     }
-    
-    ## Last step: clean up column names of data
     data[, c("balancedValue", "nutrientElement", "foodAdjRatio") := NULL]
-    return(data)
+    
+    ## STEP 7: Aggregate to FBS Level
+    if(is.null(fbsTree)){
+        # If no FBS tree, just return SUA-level results
+        return(data)
+    } else {
+        out = computeFbsAggregate(data = data, fbsTree = fbsTree,
+                                  standParams = p)
+        printCodeTable = fbsTree[get(p$itemVar) %in% printCodes, ]
+        p$mergeKey[p$mergeKey == p$itemVar] = "fbsID4"
+        p$itemVar = "fbsID4"
+        cat("\nFBS Table at first level of aggregation:\n")
+        print(printSUATable(data = out[[1]], standParams = p,
+                            printCodes = printCodeTable[, fbsID4],
+                            printProcessing = TRUE))
+        p$mergeKey[p$mergeKey == p$itemVar] = "fbsID3"
+        p$itemVar = "fbsID3"
+        cat("\nFBS Table at second level of aggregation:\n")
+        print(printSUATable(data = out[[2]], standParams = p,
+                            printCodes = printCodeTable[, fbsID3],
+                            printProcessing = TRUE))
+        p$mergeKey[p$mergeKey == p$itemVar] = "fbsID2"
+        p$itemVar = "fbsID2"
+        cat("\nFBS Table at third level of aggregation:\n")
+        print(printSUATable(data = out[[3]], standParams = p,
+                            printCodes = printCodeTable[, fbsID2],
+                            printProcessing = TRUE))
+        p$mergeKey[p$mergeKey == p$itemVar] = "fbsID1"
+        p$itemVar = "fbsID1"
+        cat("\nFBS Table at final level of aggregation:\n")
+        print(printSUATable(data = out[[4]], standParams = p,
+                            printCodes = printCodeTable[, fbsID1],
+                            printProcessing = TRUE))
+        return(out)
+    }
 }

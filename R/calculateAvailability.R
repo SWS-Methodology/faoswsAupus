@@ -83,5 +83,6 @@ calculateAvailability = function(tree, standParams){
     ## average the availabilities in those cases.
     output = output[, list(availability = mean(availability)),
                     by = c(standParams$childVar, standParams$parentVar)]
+    output[availability < 0, availability := 0]
     return(output)
 }
