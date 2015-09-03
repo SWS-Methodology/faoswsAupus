@@ -20,12 +20,7 @@
 ##' 
 
 computeFbsAggregate = function(data, fbsTree, standParams){
-    origNrow = nrow(data)
     data = merge(data, fbsTree, by = standParams$itemVar)
-    if(nrow(data) < origNrow){
-        stop("Not all commodities are being mapped to fbs aggregates!  ",
-             "Check fbsTree and that it covers all commodities!")
-    }
     out = list()
     out[[1]] = data[, list(Value = sum(Value)),
                     by = c("element", standParams$yearVar, standParams$geoVar, "fbsID4")]

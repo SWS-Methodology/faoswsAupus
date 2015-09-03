@@ -136,8 +136,9 @@ finalStandardizationToPrimary = function(data, tree, standParams,
     ## Production should never be standardized. Instead, take the primary value 
     ## directly.  But, the elements in the food processing tree won't have a
     ## previously assigned production, so don't do this for them.
-    foodProcParents = tree[grepl("f???_", get(standParams$childVar)),
+    foodProcParents = tree[grepl("^f\\?\\?\\?_", get(standParams$childVar)),
                            unique(get(standParams$parentVar))]
+    foodProcParents = c()
     out[element %in% c(standParams$productionCode) &
             !get(standParams$itemVar) %in% foodProcParents,
         Value := Value.old]

@@ -98,11 +98,13 @@ standardizationWrapper = function(data, tree, fbsTree = NULL, standParams,
              c(p$standExtractVar) := get(p$extractVar)]
     }
     stopifnot(!is.na(tree[, get(p$extractVar)]))
-    # Checks for fbsTree
-    stopifnot(c(p$itemVar, p$extractVar, "fbsID1",
-                "fbsID2", "fbsID3", "fbsID4") %in% colnames(fbsTree))
     ## Check that all standParentVar are NA or a value, never ""
     stopifnot(tree[!is.na(get(p$standParentVar)), get(p$standParentVar)] != "")
+    # Checks for fbsTree
+    if(!is.null(fbsTree)){
+        stopifnot(c(p$itemVar, p$extractVar, "fbsID1",
+                    "fbsID2", "fbsID3", "fbsID4") %in% colnames(fbsTree))
+    }
     if(any(is.na(tree[, get(p$parentVar)]))){
         warning("tree has some NA parents.  Those edges have been deleted.")
         tree = tree[!is.na(get(p$parentVar)), ]
@@ -144,6 +146,10 @@ standardizationWrapper = function(data, tree, fbsTree = NULL, standParams,
     level = findProcessingLevel(tree, from = p$parentVar,
                                 to = p$childVar, aupusParam = p)
     primaryEl = level[processingLevel == 0, get(p$itemVar)]
+    ## Add in elements not in the tree, as they are essentially parents
+    nonTreeEl = data[[p$itemVar]]
+    nonTreeEl = nonTreeEl[!nonTreeEl %in% level[[p$itemVar]]]
+    primaryEl = c(primaryEl, nonTreeEl)
     foodProcEl = unique(tree[get(p$targetVar) == "F",
                              get(p$parentVar)])
     officialProd = data[element == p$productionCode & Value > 0,
@@ -199,9 +205,9 @@ standardizationWrapper = function(data, tree, fbsTree = NULL, standParams,
     tree = merge(tree, mergeToTree, by = p$parentVar, all.x = TRUE)
     availability = calculateAvailability(tree, p)
     tree = collapseEdges(edges = tree, parentName = p$parentVar,
-                              childName = p$childVar,
-                              extractionName = p$extractVar,
-                              keyCols = NULL)
+                         childName = p$childVar,
+                         extractionName = p$extractVar,
+                         keyCols = NULL)
     tree[, availability := NULL]
     tree = merge(tree, availability,
                       by = c(p$childVar, p$parentVar))
@@ -217,11 +223,13 @@ standardizationWrapper = function(data, tree, fbsTree = NULL, standParams,
                    with = FALSE]))
         plotTree = plotTree[!is.na(get(p$childVar)) & !is.na(get(p$parentVar)) &
                                 get(p$childVar) %in% printCodes, ]
-        plotSingleTree(edges = plotTree, parentColname = p$parentVar,
-                       childColname = p$childVar,
-                       extractionColname = p$extractVar, box.size = .06,
-                       box.type = "circle", cex.txt = 1, box.prop = .5,
-                       box.cex = 1)
+        if(nrow(plotTree) > 0){
+            plotSingleTree(edges = plotTree, parentColname = p$parentVar,
+                           childColname = p$childVar,
+                           extractionColname = p$extractVar, box.size = .06,
+                           box.type = "circle", cex.txt = 1, box.prop = .5,
+                           box.cex = 1)
+        }
     }
 
     ## STEP 4: Standardize commodities to balancing level

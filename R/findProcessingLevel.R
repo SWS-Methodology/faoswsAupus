@@ -23,7 +23,9 @@
 ##' @export
 ##' 
 
-findProcessingLevel = function(edgeData, from, to, plot = FALSE, aupusParam){
+findProcessingLevel = function(edgeData, from, to, plot = FALSE,
+                               aupusParam = list(itemVar = "temp"),
+                               errorOnLoop = TRUE){
     e = edgeData[, c(from, to), with = FALSE]
     v = unique(unlist(edgeData[, c(from, to), with = FALSE]))
     processingGraph = graph.data.frame(d = e, vertices = v, directed = TRUE)
@@ -42,5 +44,15 @@ findProcessingLevel = function(edgeData, from, to, plot = FALSE, aupusParam){
 
     finalLevels.dt = data.table(names(finalLevels), finalLevels)
     setnames(finalLevels.dt, c(aupusParam$itemVar, "processingLevel"))
-    finalLevels.dt[order(processingLevel), ]
+    
+    if(errorOnLoop & finalLevels.dt[, min(processingLevel) == -Inf]){
+        loopNodes = finalLevels.dt[processingLevel == -Inf,
+                                   get(aupusParam$itemVar)]
+        graph = graph.data.frame(edges[get(from) %in% loopNodes |
+                                         get(to) %in% loopNodes, ])
+        plot(graph)
+        stop("Loops detected in commodity tree!  Check vertices:\n",
+             paste(loopNodes, collapse = "\n"))
+    }
+    return(finalLevels.dt[order(processingLevel), ])
 }
