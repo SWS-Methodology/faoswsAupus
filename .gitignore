@@ -3,3 +3,7 @@ vignettes/*.[a-zA-QS-Z]*
 vignettes/figure
 documentation/fortran
 documentation/MACAGF
+.Rproj.user
+
+.RData
+.Rhistory

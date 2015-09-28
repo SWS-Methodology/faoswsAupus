@@ -3,3 +3,5 @@ tests
 README.md
 SUA2012.zip
 vignettes
+^.*\.Rproj$
+^\.Rproj\.user$
