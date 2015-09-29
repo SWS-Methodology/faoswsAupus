@@ -13,7 +13,7 @@ A table of the symbols in use, containing the symbol/flag and the
 name/description of the flag.  The replacable column indicates whether
 data with that particular symbol can be imputed.
 }
-\keyword{flag,}
+\keyword{flag}
 \keyword{replaceable}
-\keyword{symbol,}
+\keyword{symbol}
 

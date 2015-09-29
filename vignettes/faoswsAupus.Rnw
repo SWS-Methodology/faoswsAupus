@@ -250,7 +250,7 @@ takes the shareData dataset and generates a plot for how the commodities are
 related to one another.
 
 <<>>=
-plotCommodityTree(US$shareData)
+plotCommodityTrees(US$shareData)
 @
 
 For simplicity, let's look at only commodities 71, 72, and 73.

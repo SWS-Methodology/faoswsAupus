@@ -37,7 +37,7 @@
 ##' }
 ##' 
 ##' @docType data
-##' @keywords AUPUS, commodity groups
+##' @keywords AUPUS commodity-groups
 ##' @name aupusGroups
 ##' @usage data(aupusGroups)
 ##' @format A list object containing 1 numeric vector.  Each vector specifies

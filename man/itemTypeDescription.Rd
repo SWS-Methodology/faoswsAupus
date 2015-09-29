@@ -15,8 +15,7 @@ general grouping of items, and describes what kind of item a particular
 commodity is.  Each commodity has an item code, and the item type can
 be thought of as defining logical groups of item codes.
 }
-\keyword{commodity,}
-\keyword{group}
+\keyword{commodity}
 \keyword{item}
-\keyword{item,}
+\keyword{item-group}
 

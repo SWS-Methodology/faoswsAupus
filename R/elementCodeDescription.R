@@ -8,7 +8,7 @@
 ##' element code/variable represents for certain commodity groups.
 ##' 
 ##' @docType data
-##' @keywords element code, aupus
+##' @keywords element-code aupus
 ##' @name elementCodeDescription
 ##' @usage data(elementCodeDescription)
 ##' @format A data.table

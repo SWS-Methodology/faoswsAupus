@@ -27,6 +27,9 @@ production values for processed commodities into a food value for their
 parents.  The idea is that we have official and estimated data at the SUA
 level, and the imbalances at this level translate into an imbalance in their
 parent commodities.  To capture/account for this imbalance, we roll it up
-into food at the top line.
+into food at the top line.  Note that the original estimates for food will
+be stored in this table under a new element code: the current food element
+code pasted with "_orig".  These original values need to be saved somewhere,
+and this seemed like a reasonable place.
 }
 

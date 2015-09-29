@@ -16,6 +16,6 @@ data(US)
 An example dataset of what can be created from calling the function
 getAupusDataset.
 }
-\keyword{aupus,}
+\keyword{aupus}
 \keyword{dataset}
 

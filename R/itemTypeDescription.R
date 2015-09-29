@@ -6,7 +6,7 @@
 ##' be thought of as defining logical groups of item codes.
 ##' 
 ##' @docType data
-##' @keywords item, commodity, item group
+##' @keywords item commodity item-group
 ##' @name itemTypeDescription
 ##' @usage data(itemTypeDescription)
 ##' @format A data.table with two columns: the itemTypeCode and the

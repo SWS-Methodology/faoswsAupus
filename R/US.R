@@ -4,7 +4,7 @@
 ##' getAupusDataset.
 ##' 
 ##' @docType data
-##' @keywords aupus, dataset
+##' @keywords aupus dataset
 ##' @name US
 ##' @usage data(US)
 ##' @format A list object containing 8 individual datasets.  Each dataset is

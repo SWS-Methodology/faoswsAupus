@@ -5,7 +5,7 @@
 ##' as well as column name descriptions.
 ##' 
 ##' @docType data
-##' @keywords aupus, parameter, dimension
+##' @keywords aupus parameter dimension
 ##' @name usAupusParam
 ##' @usage data(usAupusParam)
 ##' @format A list object with 5 elements: areaCode, itemCode, elementCode,

@@ -4,7 +4,8 @@
 \alias{findProcessingLevel}
 \title{Find Processing Level}
 \usage{
-findProcessingLevel(edgeData, from, to, plot = FALSE, aupusParam)
+findProcessingLevel(edgeData, from, to, plot = FALSE,
+  aupusParam = list(itemVar = "temp"), errorOnLoop = TRUE)
 }
 \arguments{
 \item{edgeData}{The edge data, typically from the function buildEdges}
