@@ -3,7 +3,7 @@ Type: Package
 Title: Package to perform the AUPUS calculation.
 Version: 1.0
 Date: 2015-02-10
-Authors@R: c(person("Micheal. C. J.", "Kao", role = c("aut", "cre"), email = "michael.kao@fao.org"))
+Authors@R: c(person("Michael. C. J.", "Kao", role = c("aut", "cre"), email = "michael.kao@fao.org"))
 Author: Joshua M. Browning <joshua.browning@fao.org>, Michael C. J. Kao <michael.kao@fao.org>
 Maintainer: Joshua M. Browning <joshua.browning@fao.org>
 Description: The package is a replication and improvement to the AUPUS module in the old Statistical Working System (SWS)
