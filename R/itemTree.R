@@ -38,7 +38,7 @@
 ##' }
 ##' 
 ##' @docType data
-##' @keywords item, commodity groups, fbs, codes
+##' @keywords item commodity-groups fbs codes
 ##' @name itemTree
 ##' @usage data(itemTree)
 ##' @format A data.table object of 12 columns by 808 rows.

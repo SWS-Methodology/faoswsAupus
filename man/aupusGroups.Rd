@@ -47,7 +47,6 @@ A list and short description of each element is below:
     \item escrSugarExistence: These cases
 }
 }
-\keyword{AUPUS,}
-\keyword{commodity}
-\keyword{groups}
+\keyword{AUPUS}
+\keyword{commodity-groups}
 

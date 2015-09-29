@@ -50,7 +50,7 @@ This object is an example of the type of object created by the
 getAupusParameter function.  It contains codes/dimensions of the data
 as well as column name descriptions.
 }
-\keyword{aupus,}
+\keyword{aupus}
 \keyword{dimension}
-\keyword{parameter,}
+\keyword{parameter}
 

@@ -48,8 +48,7 @@ A short description of each column is below:
 }
 }
 \keyword{codes}
-\keyword{commodity}
-\keyword{fbs,}
-\keyword{groups,}
-\keyword{item,}
+\keyword{commodity-groups}
+\keyword{fbs}
+\keyword{item}
 

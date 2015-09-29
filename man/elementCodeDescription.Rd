@@ -17,6 +17,5 @@ short description.  The remaining columns give examples of what that
 element code/variable represents for certain commodity groups.
 }
 \keyword{aupus}
-\keyword{code,}
-\keyword{element}
+\keyword{element-code}
 

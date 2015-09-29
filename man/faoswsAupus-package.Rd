@@ -2,6 +2,7 @@
 % Please edit documentation in R/faoswsAupus-package.R
 \docType{package}
 \name{faoswsAupus-package}
+\alias{faoswsAupus}
 \alias{faoswsAupus-package}
 \title{Package to perform the AUPUS calculation.}
 \description{

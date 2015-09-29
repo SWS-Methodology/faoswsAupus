@@ -19,8 +19,8 @@ of the parent node.}
 of the child node.}
 
 \item{returnMinLevel}{Logical.  If a node exists at multiple processing
-  levels, should the minimum level be returned?  Or, should multiple records
-  be returned for each level?}
+  levels, should the minimum level be returned?  If FALSE, the maximum is
+  returned.}
 }
 \value{
 A data.table with two columns: node (the ID of the commodity code)
