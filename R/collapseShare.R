@@ -40,7 +40,7 @@ collapseShare = function(aupusParam, shareData, shares, verbose = FALSE){
                   aupusParam$keyNames$itemChildName),
               with = FALSE]
         })))
-    uniqueYear = as.numeric(aupusParam$year)
+    uniqueYear = as.character(aupusParam$year)
     uniqueArea = aupusParam$areaCode
 
     ## Create the final data.table by combining all possible values

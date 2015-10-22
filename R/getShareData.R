@@ -1,31 +1,36 @@
 ##' Get Share Data
 ##' 
-##' This function extracts the shares data from the data base.  The shares data
-##' contains information on children are shared amongst parents.  For example,
-##' some children of wheat flour (item = "16") are: macaroni (18), bread (20),
-##' and pastry (22).  In Algeria (geographicAreaFS = "4"), the shares are 95,
-##' 3, and 2 which means that 95% of wheat flour is converted to macaroni, 3%
-##' to bread and 2% to pastry.  A default share is also available with the 0
+##' This function extracts the shares data from the data base.  The shares data 
+##' contains information on children are shared amongst parents.  For example, 
+##' some children of wheat flour (item = "16") are: macaroni (18), bread (20), 
+##' and pastry (22).  In Algeria (geographicAreaFS = "4"), the shares are 95, 3,
+##' and 2 which means that 95% of wheat flour is converted to macaroni, 3% to
+##' bread and 2% to pastry.  A default share is also available with the 0 
 ##' wildcard, and values can vary by year (also with a wildcard of 0).
-##'
-##' @param aupusParam A list of running parameters to be used in pulling the data.
-##' Typically, this is generated from getAupusParameter (see that function for
-##' a description of the required elements).
-##' @param database Whether to use the new or the old statistical
-##' working system.
-##' @param conn The RJDBS connection to the old working system.  Only required
-##' if database = "old".
 ##' 
-##' @return A list of three items: specific, yearWildCard, and
-##' areaYearWildCard.  Each of these elements has the same general structure:
-##' a data.table with zero to two dimension columns (area and year), the parent
-##' and child items, and then the Value_share column (representing the
-##' proportion allocated to each child).
-##' 
+##' @param aupusParam A list of running parameters to be used in pulling the
+##'   data. Typically, this is generated from getAupusParameter (see that
+##'   function for a description of the required elements).
+##' @param database Whether to use the new or the old statistical working
+##'   system.
+##' @param conn The RJDBS connection to the old working system.  Only required 
+##'   if database = "old".
+##' @param allParents Logical, defaults to FALSE.  If FALSE, aupusParam$itemCode
+##'   is used to determine the parent and child codes to pull.  However, if this
+##'   parameter is TRUE, all item codes in the domain are used as possibly
+##'   parents.
+##'   
+##' @return A list of three items: specific, yearWildCard, and areaYearWildCard.
+##'   Each of these elements has the same general structure: a data.table with
+##'   zero to two dimension columns (area and year), the parent and child items,
+##'   and then the Value_share column (representing the proportion allocated to
+##'   each child).
+##'   
 ##' @export
 ##' 
 
-getShareData = function(aupusParam, database = c("new", "old"), conn){
+getShareData = function(aupusParam, database = c("new", "old"), conn,
+                        allParents = FALSE){
     
     ## Data Quality Checks
     if(!exists("aupusParameterEnsured") || !aupusParameterEnsured)
@@ -69,6 +74,11 @@ getShareData = function(aupusParam, database = c("new", "old"), conn){
                            keys = as.character(aupusParam$itemCode)),
                  Dimension(name = "timePointYearsSP",
                            keys = as.character(c("0", aupusParam$year))))
+        if(allParents){
+            shareDimension[[2]]@keys = GetCodeList(domain = "faostat_one",
+                    dataset = "aupus_share_fs",
+                    dimension = "measuredItemParentFS")[, code]
+        }
 
         shareDataContext =
             DatasetKey(domain = "faostat_one",

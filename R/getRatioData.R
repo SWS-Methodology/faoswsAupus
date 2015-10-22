@@ -102,8 +102,9 @@ getRatioData = function(aupusParam, database = c("new", "old"), conn){
                 "SWS-797")
         isLogical = (sapply(fullRatio, typeof) == "logical")
         logicalColumns = names(which(isLogical))
-        for(name in logicalColumns)
+        for(name in logicalColumns){
             fullRatio[, c(name) := as.numeric(get(name))]
+        }
 
         oldNames = grep("Value", colnames(fullRatio), value = TRUE)
         setnames(fullRatio,
