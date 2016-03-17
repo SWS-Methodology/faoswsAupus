@@ -4,7 +4,19 @@ library(faoswsUtil)
 
 if(Sys.info()[7] == "rockc_000"){ # Josh's personal
     setwd("~/GitHub/faoswsAupus/")
+} else if(Sys.info()[7] == "josh"){
+    setwd("~/Documents/Github/faoswsAupus/")
+} else {
+    stop("Undefined user!")
 }
+
+SetClientFiles(dir = "~/R certificate files/QA")
+GetTestEnvironment(
+    ## baseUrl = "https://hqlprswsas1.hq.un.fao.org:8181/sws",
+    ## token = "7b588793-8c9a-4732-b967-b941b396ce4d"
+    baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
+    token = "0297f8b1-62ed-4d6a-a07e-bd1bacc6e615"
+)
 
 extractRate = read.fwf("documentation/FBS_LST (from Nick)/defextr.lst",
                        skip = 2, widths = c(4, 6))
@@ -13,7 +25,11 @@ extractRate$geographicAreaM49 = "0"
 extractRate$measuredElement = "5423"
 extractRate$timePointYears = "0"
 extractRate$Value = extractRate$Value / 100
-extractRate$measuredItemCPC := fcl2cpc(extractRate$measuredItemCPC)
+extractRate$measuredItemCPC = formatC(extractRate$measuredItemCPC, width = 4, flag = "0")
+extractRate$measuredItemCPC = fcl2cpc(extractRate$measuredItemCPC)
+# Many FCL codes are missing in the map, but I only found one in the SUA working
+# table: 1159 Offals of Other Camelids.
+extractRate = extractRate[!is.na(extractRate$measuredItemCPC), ]
 
 io = read.fwf("documentation/FBS_LST (from Nick)/ioext.lst",
               widths = 1000, stringsAsFactors = FALSE)
@@ -51,3 +67,6 @@ shares[, measuredItemParentCPC := formatC(measuredItemParentCPC, width = 4,
                                           flag = "0")]
 shares[, measuredItemChildCPC := fcl2cpc(as.character(measuredItemChildCPC))]
 shares[, measuredItemParentCPC := fcl2cpc(as.character(measuredItemParentCPC))]
+
+write.csv(shares, file = "data/defaultShares.csv", row.names = FALSE)
+write.csv(extractRate, file = "data/defaultExtractionRates.csv", row.names = FALSE)
